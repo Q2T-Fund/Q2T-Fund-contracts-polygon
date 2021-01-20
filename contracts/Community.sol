@@ -39,6 +39,9 @@ contract Community is BaseRelayRecipient {
      **/
     event MemberRemoved(address _member);
 
+    //Aave LendingPool address
+    address public constant LENDING_POOL='0x1c8756FD2B28e9426CDBDcC7E3c4d64fa9A54728' //ropsten
+    
     // The address of the DITOToken ERC20 contract
     IDITOToken public tokens;
 
@@ -211,7 +214,7 @@ contract Community is BaseRelayRecipient {
 
         // Retrieve LendingPool address
         ILendingPoolAddressesProvider provider = ILendingPoolAddressesProvider(
-            address(0x1c8756FD2B28e9426CDBDcC7E3c4d64fa9A54728)
+            address(LENDING_POOL)
         ); // Ropsten address, for other addresses: https://docs.aave.com/developers/developing-on-aave/deployed-contract-instances
         ILendingPool lendingPool = ILendingPool(provider.getLendingPool());
 
@@ -246,7 +249,7 @@ contract Community is BaseRelayRecipient {
 
         // Retrieve LendingPool address
         ILendingPoolAddressesProvider provider = ILendingPoolAddressesProvider(
-            address(0x1c8756FD2B28e9426CDBDcC7E3c4d64fa9A54728)
+            address(LENDING_POOL)
         ); // Ropsten address, for other addresses: https://docs.aave.com/developers/developing-on-aave/deployed-contract-instances
         ILendingPool lendingPool = ILendingPool(provider.getLendingPool());
 
