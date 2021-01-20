@@ -1,0 +1,14 @@
+{
+  "name": "q2t-fund-monorepo",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "<evgeni@leapdao.org>",
+  "license": "MIT",
+  "devDependencies": {
+    "hardhat": "^2.0.8"
+  },
+  "dependencies": {
+    "@opengsn/gsn": "^2.1.0",
+    "@openzeppelin/contracts": "^3.3.0"
+  }
+}
