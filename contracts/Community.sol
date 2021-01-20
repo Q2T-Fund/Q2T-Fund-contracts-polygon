@@ -12,7 +12,7 @@ import "./ILendingPool.sol";
 import "./IAtoken.sol";
 import "./IFiatTokenV2.sol";
 
-import "./DITOToken.sol";
+import "./IDITOToken.sol";
 import "./WadRayMath.sol";
 
 /**
@@ -39,8 +39,8 @@ contract Community is BaseRelayRecipient {
      **/
     event MemberRemoved(address _member);
 
-    // The address of the DITOToken ERC20 contract instantiated on Community creation
-    DITOToken public tokens;
+    // The address of the DITOToken ERC20 contract
+    IDITOToken public tokens;
 
     mapping(address => bool) public enabledMembers;
     uint256 public numberOfMembers;
@@ -60,10 +60,10 @@ contract Community is BaseRelayRecipient {
     // you are using from
     // https://docs.opengsn.org/gsn-provider/networks.html
     // 0x25CEd1955423BA34332Ec1B60154967750a0297D is ropsten's one
-    constructor(address _forwarder) public {
+    constructor(address _forwarder, address _token) public {
         trustedForwarder = _forwarder;
 
-        tokens = new DITOToken(SafeMath.mul(96000,1e18));
+        tokens = IDITOToken(_token);
 
         depositableCurrencies.push("DAI");
         depositableCurrencies.push("USDC");
