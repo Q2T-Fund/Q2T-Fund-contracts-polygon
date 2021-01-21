@@ -40,7 +40,7 @@ contract Community is BaseRelayRecipient {
     event MemberRemoved(address _member);
 
     //Aave LendingPool address
-    address public constant LENDING_POOL='0x1c8756FD2B28e9426CDBDcC7E3c4d64fa9A54728' //ropsten
+    address public constant LENDING_POOL=0x1c8756FD2B28e9426CDBDcC7E3c4d64fa9A54728; //ropsten
     
     // The address of the DITOToken ERC20 contract
     IDITOToken public tokens;
