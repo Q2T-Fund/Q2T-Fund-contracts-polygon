@@ -1,5 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.7.4;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -9,7 +10,7 @@ import "./gsn/BaseRelayRecipient.sol";
 
 import "./ILendingPoolAddressesProvider.sol";
 import "./ILendingPool.sol";
-import "./IAtoken.sol";
+import "./IAToken.sol";
 import "./IFiatTokenV2.sol";
 
 import "./IDITOToken.sol";
@@ -39,8 +40,8 @@ contract Community is BaseRelayRecipient {
      **/
     event MemberRemoved(address _member);
 
-    //Aave LendingPool address
-    address public constant LENDING_POOL=0x1c8756FD2B28e9426CDBDcC7E3c4d64fa9A54728; //ropsten
+    //Aave Lending Pool Addresses Provider address
+    address public constant LENDING_POOL_AP=0x88757f2f99175387aB4C6a4b3067c77A695b0349; //kovan
     
     // The address of the DITOToken ERC20 contract
     IDITOToken public tokens;
@@ -212,9 +213,9 @@ contract Community is BaseRelayRecipient {
             "Amount to invest cannot be higher than deposited amount."
         );
 
-        // Retrieve LendingPool address
+        // Retrieve LendingPool address provide
         ILendingPoolAddressesProvider provider = ILendingPoolAddressesProvider(
-            address(LENDING_POOL)
+            address(LENDING_POOL_AP)
         ); // Ropsten address, for other addresses: https://docs.aave.com/developers/developing-on-aave/deployed-contract-instances
         ILendingPool lendingPool = ILendingPool(provider.getLendingPool());
 
@@ -222,10 +223,10 @@ contract Community is BaseRelayRecipient {
         uint16 referral = 0;
 
         // Approve LendingPool contract to move your DAI
-        currency.approve(provider.getLendingPoolCore(), amount);
+        currency.approve(address(lendingPool), amount);
 
         // Deposit _amount DAI
-        lendingPool.deposit(currencyAddress, _amount.mul(1e18), referral);
+        lendingPool.deposit(currencyAddress, _amount.mul(1e18), msg.sender, referral);
     }
 
     /**
@@ -241,7 +242,7 @@ contract Community is BaseRelayRecipient {
         address aDaiAddress = address(depositableACurrenciesContracts["DAI"]); // Ropsten aDAI
 
         // Client has to convert to balanceOf / 1e18
-        uint256 _investedBalance = IAtoken(aDaiAddress).balanceOf(
+        uint256 _investedBalance = IAToken(aDaiAddress).balanceOf(
             address(this)
         );
 
@@ -249,13 +250,12 @@ contract Community is BaseRelayRecipient {
 
         // Retrieve LendingPool address
         ILendingPoolAddressesProvider provider = ILendingPoolAddressesProvider(
-            address(LENDING_POOL)
+            address(LENDING_POOL_AP)
         ); // Ropsten address, for other addresses: https://docs.aave.com/developers/developing-on-aave/deployed-contract-instances
         ILendingPool lendingPool = ILendingPool(provider.getLendingPool());
 
         // Client has to convert to balanceOf / 1e27
-        (, , , , uint256 daiLiquidityRate, , , , , , , , ) = lendingPool
-            .getReserveData(daiAddress);
+        uint256 daiLiquidityRate= lendingPool.getReserveData(daiAddress).currentLiquidityRate;
 
         return (_investedBalance, daiLiquidityRate);
     }
@@ -278,18 +278,24 @@ contract Community is BaseRelayRecipient {
             "Gasless USDC is not implemented in Aave yet"
         );
 
-        // Retrieve aCurrencyAddress
-        address aCurrencyAddress = address(
-            depositableACurrenciesContracts[_currency]
+        // Retrieve CurrencyAddress
+        address currencyAddress = address(
+            depositableCurrenciesContracts[_currency]
         );
-        IAtoken aCurrency = IAtoken(aCurrencyAddress);
+        
+        // Retrieve LendingPool address provide
+        ILendingPoolAddressesProvider provider = ILendingPoolAddressesProvider(
+            address(LENDING_POOL_AP)
+        ); // Ropsten address, for other addresses: https://docs.aave.com/developers/developing-on-aave/deployed-contract-instances
+        ILendingPool lendingPool = ILendingPool(provider.getLendingPool());
 
-        if (aCurrency.isTransferAllowed(address(this), _amount.mul(1e18)) == false)
+        //TODO: update the check for V2 protocol
+        /*if (aCurrency.isTransferAllowed(address(this), _amount.mul(1e18)) == false)
             revert(
                 "Can't withdraw from investment, probably not enough liquidity on Aave."
-            );
+            );*/
 
         // Redeems _amount aCurrency
-        aCurrency.redeem(_amount * 1e18);
+        lendingPool.withdraw(currencyAddress, _amount.mul(1e18), msg.sender);
     }
 }

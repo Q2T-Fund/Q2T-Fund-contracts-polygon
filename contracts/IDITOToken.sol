@@ -10,6 +10,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * @author DistributedTown
  */
 interface IDITOToken is IERC20 {
+    event AddedToWhitelist(address _communityMember);
+    event RemovedFromWhitelist(address _communityMember);
         /**
      * @dev Adds a community member to the whitelist, called by the join function of the Community contract
      * @param _communityMember the address of the new member of a Community to add to the whitelist

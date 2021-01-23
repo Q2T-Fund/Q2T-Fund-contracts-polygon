@@ -1,65 +1,60 @@
-//SPDX-License-Identifier: MIT
-pragma solidity >=0.6.10 <0.8.0;
+// SPDX-License-Identifier: agpl-3.0
+pragma solidity >=0.6.12 <0.8.0;
 
 /**
-@title ILendingPoolAddressesProvider interface
-@notice provides the interface to fetch the LendingPoolCore address
- */
+ * @title LendingPoolAddressesProvider contract
+ * @dev Main registry of addresses part of or connected to the protocol, including permissioned roles
+ * - Acting also as factory of proxies and admin of those, so with right to change its implementations
+ * - Owned by the Aave Governance
+ * @author Aave
+ **/
+interface ILendingPoolAddressesProvider {
+  event MarketIdSet(string newMarketId);
+  event LendingPoolUpdated(address indexed newAddress);
+  event ConfigurationAdminUpdated(address indexed newAddress);
+  event EmergencyAdminUpdated(address indexed newAddress);
+  event LendingPoolConfiguratorUpdated(address indexed newAddress);
+  event LendingPoolCollateralManagerUpdated(address indexed newAddress);
+  event PriceOracleUpdated(address indexed newAddress);
+  event LendingRateOracleUpdated(address indexed newAddress);
+  event ProxyCreated(bytes32 id, address indexed newAddress);
+  event AddressSet(bytes32 id, address indexed newAddress, bool hasProxy);
 
-abstract contract ILendingPoolAddressesProvider {
-    function getLendingPool() public virtual view returns (address);
+  function getMarketId() external view returns (string memory);
 
-    function setLendingPoolImpl(address _pool) public virtual;
+  function setMarketId(string calldata marketId) external;
 
-    function getLendingPoolCore() public virtual view returns (address payable);
+  function setAddress(bytes32 id, address newAddress) external;
 
-    function setLendingPoolCoreImpl(address _lendingPoolCore) public virtual;
+  function setAddressAsProxy(bytes32 id, address impl) external;
 
-    function getLendingPoolConfigurator() public virtual view returns (address);
+  function getAddress(bytes32 id) external view returns (address);
 
-    function setLendingPoolConfiguratorImpl(address _configurator)
-        public
-        virtual;
+  function getLendingPool() external view returns (address);
 
-    function getLendingPoolDataProvider() public virtual view returns (address);
+  function setLendingPoolImpl(address pool) external;
 
-    function setLendingPoolDataProviderImpl(address _provider) public virtual;
+  function getLendingPoolConfigurator() external view returns (address);
 
-    function getLendingPoolParametersProvider()
-        public
-        virtual
-        view
-        returns (address);
+  function setLendingPoolConfiguratorImpl(address configurator) external;
 
-    function setLendingPoolParametersProviderImpl(address _parametersProvider)
-        public
-        virtual;
+  function getLendingPoolCollateralManager() external view returns (address);
 
-    function getTokenDistributor() public virtual view returns (address);
+  function setLendingPoolCollateralManager(address manager) external;
 
-    function setTokenDistributor(address _tokenDistributor) public virtual;
+  function getPoolAdmin() external view returns (address);
 
-    function getFeeProvider() public virtual view returns (address);
+  function setPoolAdmin(address admin) external;
 
-    function setFeeProviderImpl(address _feeProvider) public virtual;
+  function getEmergencyAdmin() external view returns (address);
 
-    function getLendingPoolLiquidationManager()
-        public
-        virtual
-        view
-        returns (address);
+  function setEmergencyAdmin(address admin) external;
 
-    function setLendingPoolLiquidationManager(address _manager) public virtual;
+  function getPriceOracle() external view returns (address);
 
-    function getLendingPoolManager() public virtual view returns (address);
+  function setPriceOracle(address priceOracle) external;
 
-    function setLendingPoolManager(address _lendingPoolManager) public virtual;
+  function getLendingRateOracle() external view returns (address);
 
-    function getPriceOracle() public virtual view returns (address);
-
-    function setPriceOracle(address _priceOracle) public virtual;
-
-    function getLendingRateOracle() public virtual view returns (address);
-
-    function setLendingRateOracle(address _lendingRateOracle) public virtual;
+  function setLendingRateOracle(address lendingRateOracle) external;
 }
