@@ -74,7 +74,7 @@ contract Community is BaseRelayRecipient, Ownable {
     // you are using from
     // https://docs.opengsn.org/gsn-provider/networks.html
     // 0x25CEd1955423BA34332Ec1B60154967750a0297D is ropsten's one
-    constructor(address _forwarder, address _token, address _treasury) public {
+    constructor(address _forwarder, address _token) public {
         trustedForwarder = _forwarder;
 
         tokens = IDITOToken(_token);
