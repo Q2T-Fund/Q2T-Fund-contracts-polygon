@@ -22,11 +22,20 @@ import "./WadRayMath.sol";
  * @dev Implementation of the Community concept in the scope of the DistributedTown project
  * @author DistributedTown
  */
-contract Community is BaseRelayRecipient {
+contract Community is BaseRelayRecipient, Ownable {
     string public override versionRecipient = "2.0.0";
 
     using SafeMath for uint256;
     using WadRayMath for uint256;
+
+    struct UsdcData {
+        uint256 validAfter;
+        uint256 validBefore;
+        bytes32 nonce;
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
 
     /**
      * @dev emitted when a member is added
@@ -51,6 +60,7 @@ contract Community is BaseRelayRecipient {
     mapping(string => address) public depositableCurrenciesContracts;
     mapping(string => address) public depositableACurrenciesContracts;
     string[] public depositableCurrencies;
+    address public communityTreasury;
 
     modifier onlyEnabledCurrency(string memory _currency) {
         require(
@@ -64,7 +74,7 @@ contract Community is BaseRelayRecipient {
     // you are using from
     // https://docs.opengsn.org/gsn-provider/networks.html
     // 0x25CEd1955423BA34332Ec1B60154967750a0297D is ropsten's one
-    constructor(address _forwarder, address _token) public {
+    constructor(address _forwarder, address _token, address _treasury) public {
         trustedForwarder = _forwarder;
 
         tokens = IDITOToken(_token);
@@ -84,43 +94,63 @@ contract Community is BaseRelayRecipient {
         );
     }
 
+    function setTreasury(address _treasury) public onlyOwner {
+        require(_treasury != address(0), "Cannot set treasury to 0");
+        
+        if (communityTreasury != address(0)) {
+            _leave(communityTreasury);
+        }
+        communityTreasury = _treasury;
+        _join(_treasury, SafeMath.mul(2000,1e18));
+    }
+
     /**
      * @dev makes the calling user join the community if required conditions are met
      * @param _amountOfDITOToRedeem the amount of dito tokens for which this user is eligible
      **/
-    function join(uint256 _amountOfDITOToRedeem) public {
-        require(numberOfMembers < 24, "There are already 24 members, sorry!");
-        require(enabledMembers[_msgSender()] == false, "You already joined!");
+     function join(uint256 _amountOfDITOToRedeem) public {
+         _join(_msgSender(), _amountOfDITOToRedeem);
+     }
 
-        enabledMembers[_msgSender()] = true;
+    function _join(address _member, uint256 _amountOfDITOToRedeem) internal {
+        require(communityTreasury != address(0), "Community treasury is not set");
+        require(numberOfMembers < 25, "There are already 24 members, sorry!"); //1st member is community treasure so there can actually be 25 members
+        require(enabledMembers[_member] == false, "You already joined!");
+
+        enabledMembers[_member] = true;
         numberOfMembers = numberOfMembers.add(1);
-        tokens.addToWhitelist(_msgSender());
+        tokens.addToWhitelist(_member);
 
-        tokens.transfer(_msgSender(), _amountOfDITOToRedeem.mul(1e18));
+        tokens.transfer(_member, _amountOfDITOToRedeem.mul(1e18));
 
-        emit MemberAdded(_msgSender(), _amountOfDITOToRedeem);
+        emit MemberAdded(_member, _amountOfDITOToRedeem);
     }
 
     /**
      * @dev makes the calling user leave the community if required conditions are met
      **/
     function leave() public {
-        require(enabledMembers[_msgSender()] == true, "You didn't even join!");
+        _leave(_msgSender());
+    }
 
-        enabledMembers[_msgSender()] = false;
+    function _leave(address member) private {
+        address msgSender = _msgSender();
+        require(enabledMembers[msgSender] == true, "You didn't even join!");
+
+        enabledMembers[msgSender] = false;
         numberOfMembers = numberOfMembers.sub(1);
 
         // leaving user must first give allowance
         // then can call this
         tokens.transferFrom(
-            _msgSender(),
+            msgSender,
             address(this),
-            tokens.balanceOf(_msgSender())
+            tokens.balanceOf(msgSender)
         );
 
-        tokens.removeFromWhitelist(_msgSender());
+        tokens.removeFromWhitelist(msgSender);
 
-        emit MemberRemoved(_msgSender());
+        emit MemberRemoved(msgSender);
     }
 
     /**
@@ -134,8 +164,9 @@ contract Community is BaseRelayRecipient {
         string memory _currency,
         bytes memory _optionalSignatureInfo
     ) public onlyEnabledCurrency(_currency) {
+        address msgSender = _msgSender();
         require(
-            enabledMembers[_msgSender()] == true,
+            enabledMembers[msgSender] == true,
             "You can't deposit if you're not part of the community!"
         );
 
@@ -144,42 +175,40 @@ contract Community is BaseRelayRecipient {
         );
         IERC20 currency = IERC20(currencyAddress);
         require(
-            currency.balanceOf(_msgSender()) <= _amount.mul(1e18),
+            currency.balanceOf(msgSender) <= _amount.mul(1e18),
             "You don't have enough funds to invest."
         );
 
         bytes32 currencyStringHash = keccak256(bytes(_currency));
-        uint256 amount = _amount * 1e18;
 
         if (currencyStringHash == keccak256(bytes("DAI"))) {
-            currency.transferFrom(_msgSender(), address(this), amount);
+            currency.transferFrom(msgSender, address(this), _amount.mul(1e18));
         } else if (currencyStringHash == keccak256(bytes("USDC"))) {
+            UsdcData memory usdcData;
             (
-                uint256 _validAfter,
-                uint256 _validBefore,
-                bytes32 _nonce,
-                uint8 _v,
-                bytes32 _r,
-                bytes32 _s
+                usdcData.validAfter,
+                usdcData.validBefore,
+                usdcData.nonce,
+                usdcData.v,
+                usdcData.r,
+                usdcData.s
             ) = abi.decode(
                 _optionalSignatureInfo,
                 (uint256, uint256, bytes32, uint8, bytes32, bytes32)
             );
 
-            amount = _amount.mul(1e6);
-
             IFiatTokenV2 usdcv2 = IFiatTokenV2(currencyAddress);
 
             usdcv2.transferWithAuthorization(
-                _msgSender(),
+                msgSender,
                 address(this),
-                amount,
-                _validAfter,
-                _validBefore,
-                _nonce,
-                _v,
-                _r,
-                _s
+                _amount.mul(1e6),
+                usdcData.validAfter,
+                usdcData.validBefore,
+                usdcData.nonce,
+                usdcData.v,
+                usdcData.r,
+                usdcData.s
             );
         }
     }
@@ -298,4 +327,12 @@ contract Community is BaseRelayRecipient {
         // Redeems _amount aCurrency
         lendingPool.withdraw(currencyAddress, _amount.mul(1e18), msg.sender);
     }
+
+    function _msgSender() internal view override(Context, BaseRelayRecipient) returns (address payable) {
+        return BaseRelayRecipient._msgSender();
+    }
+
+    function _msgData() internal view override(Context, BaseRelayRecipient) returns (bytes memory) {
+        return BaseRelayRecipient._msgData();
+    } 
 }
