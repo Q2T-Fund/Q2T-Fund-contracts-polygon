@@ -12,6 +12,7 @@ import "./ILendingPoolAddressesProvider.sol";
 import "./ILendingPool.sol";
 import "./IAToken.sol";
 import "./IFiatTokenV2.sol";
+import "./ICommunityTreasury.sol";
 
 import "./IDITOToken.sol";
 import "./WadRayMath.sol";
@@ -55,12 +56,14 @@ contract Community is BaseRelayRecipient, Ownable {
     // The address of the DITOToken ERC20 contract
     IDITOToken public tokens;
 
+    string public name;
     mapping(address => bool) public enabledMembers;
     uint256 public numberOfMembers;
     mapping(string => address) public depositableCurrenciesContracts;
     mapping(string => address) public depositableACurrenciesContracts;
     string[] public depositableCurrencies;
-    address public communityTreasury;
+    ICommunityTreasury public communityTreasury;
+    address public gigManager;
 
     modifier onlyEnabledCurrency(string memory _currency) {
         require(
@@ -74,8 +77,10 @@ contract Community is BaseRelayRecipient, Ownable {
     // you are using from
     // https://docs.opengsn.org/gsn-provider/networks.html
     // 0x25CEd1955423BA34332Ec1B60154967750a0297D is ropsten's one
-    constructor(address _forwarder, address _token) public {
+    constructor(string memory _name, address _forwarder, address _token) public {
+        name = _name;
         trustedForwarder = _forwarder;
+        gigManager = _msgSender();
 
         tokens = IDITOToken(_token);
 
@@ -97,11 +102,11 @@ contract Community is BaseRelayRecipient, Ownable {
     function setTreasury(address _treasury) public onlyOwner {
         require(_treasury != address(0), "Cannot set treasury to 0");
         
-        if (communityTreasury != address(0)) {
-            _leave(communityTreasury);
+        if (address(communityTreasury) != address(0)) {
+            _leave(address(communityTreasury));
         }
-        communityTreasury = _treasury;
-        _join(_treasury, SafeMath.mul(2000,1e18));
+        communityTreasury = ICommunityTreasury(_treasury);
+        _join(address(_treasury), SafeMath.mul(2000,1e18));
     }
 
     /**
@@ -113,7 +118,7 @@ contract Community is BaseRelayRecipient, Ownable {
      }
 
     function _join(address _member, uint256 _amountOfDITOToRedeem) internal {
-        require(communityTreasury != address(0), "Community treasury is not set");
+        require(address(communityTreasury) != address(0), "Community treasury is not set");
         require(numberOfMembers < 25, "There are already 24 members, sorry!"); //1st member is community treasure so there can actually be 25 members
         require(enabledMembers[_member] == false, "You already joined!");
 
@@ -326,6 +331,13 @@ contract Community is BaseRelayRecipient, Ownable {
 
         // Redeems _amount aCurrency
         lendingPool.withdraw(currencyAddress, _amount.mul(1e18), msg.sender);
+    }
+
+    function completeGig(uint256 _amount) public {
+        require(_msgSender() == gigManager, "Only gig manager can complete gig");
+
+        tokens.transfer(address(communityTreasury), _amount.mul(1e18));
+        communityTreasury.completeGig(_amount);   
     }
 
     function _msgSender() internal view override(Context, BaseRelayRecipient) returns (address payable) {

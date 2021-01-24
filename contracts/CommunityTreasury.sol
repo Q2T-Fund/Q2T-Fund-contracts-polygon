@@ -14,8 +14,32 @@ import "./IAToken.sol";
 
 import "./IDITOToken.sol";
 import "./ICommunityTreasury.sol";
+import "./ITreasuryDao.sol";
 
 contract CommunityTreasury is ICommunityTreasury, Ownable {
+    uint256 public constant THRESHOLD = 3840;
+    
+    address public community;
+    ITreasuryDao public dao;
+    IDITOToken public token;
+    
+    function setTreasuryDAO(address _dao) public override onlyOwner {
+        dao = ITreasuryDao(_dao);
+    }
+    
+    function setCommunity(address _community) public override onlyOwner {
+        community = _community;
+    }
+
+    function completeGig(uint256 _amount) public override {
+        require(_msgSender() == community, "Gig can only be completed by community");
+
+        if(token.balanceOf(address(this)) >= THRESHOLD) {
+            //return 2k to community
+            //call TreasuryDAO to delegate funds
+        }
+    }
+
     function deposit(address _currency, uint256 _amount) public override {
 
     }
