@@ -106,7 +106,7 @@ contract Community is BaseRelayRecipient, Ownable {
             _leave(address(communityTreasury));
         }
         communityTreasury = ICommunityTreasury(_treasury);
-        _join(address(_treasury), SafeMath.mul(2000,1e18));
+        _join(address(_treasury), 2000);
     }
 
     /**

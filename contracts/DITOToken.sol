@@ -17,7 +17,7 @@ contract DITOToken is ERC20, Ownable {
     mapping(address => bool) public whitelist;
 
     modifier onlyInWhitelist() {
-        require(whitelist[msg.sender], "");
+        require(whitelist[msg.sender], "not in whitelist");
         _;
     }
 

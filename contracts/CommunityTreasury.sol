@@ -11,6 +11,7 @@ import "./gsn/BaseRelayRecipient.sol";
 import "./ILendingPoolAddressesProvider.sol";
 import "./ILendingPool.sol";
 import "./IAToken.sol";
+import {DataTypes} from './DataTypes.sol';
 
 import "./IDITOToken.sol";
 import "./ICommunityTreasury.sol";
@@ -19,9 +20,15 @@ import "./ITreasuryDao.sol";
 contract CommunityTreasury is ICommunityTreasury, Ownable {
     uint256 public constant THRESHOLD = 3840;
     
+    DataTypes.CommunityType public communityType;
     address public community;
     ITreasuryDao public dao;
     IDITOToken public token;
+
+    constructor(uint256 _type, address _token) {
+        communityType = DataTypes.CommunityType(_type);
+        token = IDITOToken(token);
+    }
     
     function setTreasuryDAO(address _dao) public override onlyOwner {
         dao = ITreasuryDao(_dao);
@@ -34,9 +41,11 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     function completeGig(uint256 _amount) public override {
         require(_msgSender() == community, "Gig can only be completed by community");
 
-        if(token.balanceOf(address(this)) >= THRESHOLD) {
-            //return 2k to community
-            //call TreasuryDAO to delegate funds
+        uint256 balance = token.balanceOf(address(this));
+
+        if (balance >= THRESHOLD) {
+            token.transfer(community, SafeMath.mul(2000, 1e18));
+            dao.thresholdReached(balance, communityType); 
         }
     }
 
@@ -46,37 +55,5 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
 
     function withdraw(address _currency, uint256 _amount) public override {
 
-    }
-
-    function delegate(address _currency, uint256 _amount, address _deligatee) public override {
-
-    }
-
-    function undelegate(address _currency, address _deligatee, bool _force) public override {
-
-    }
-    
-    function getDeligateeCount(address _currency) public override returns (uint256) {
-        return 0;
-    }
-
-    function getDeligatee(address _currency, uint256 _id) public override returns (address) {
-        return address(0);
-    }
-
-    function getDeligateeBorrowedAmount(address _currency, address _deligatee) public override returns (uint256) {
-        return 0;
-    }
-    
-    function getTreasuryBalance(address _currency) public override returns (uint256) {
-        return 0;
-    }
-
-    function getTreasuryBorrowedBalance(address _currency) public override returns (uint256) {
-        return 0;
-    }
-     
-    function getBalance(address _currency, address _member) public override returns (uint256) {
-        return 0;
     }
 }

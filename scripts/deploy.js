@@ -1,5 +1,6 @@
 const addresses = require("../addresses");
 const hre = require("hardhat");
+const { ethers } = require("hardhat");
 
 
 async function main() {
@@ -31,16 +32,40 @@ async function main() {
     console.log("Deploying Community...");
   
     const Community = await ethers.getContractFactory("Community");
-    const community = await Community.deploy(forwarder_address, token.address);
+    const community = await Community.deploy("test", forwarder_address, token.address);
   
     console.log("Community address:", community.address);
 
-    tokenBalance = await token.balanceOf(deployer.address);
-    console.log(String(tokenBalance));
-    //if()
-    console.log("Transfering tokens to Community");
+    //tokenBalance = await token.balanceOf(deployer.address);
+    console.log("Transfering tokens and ownership to Community");
+    await token.addToWhitelist(community.address);
+    await token.transferOwnership(community.address);
     await token.transfer(community.address, tokenAmount);
     console.log("Community balance: ", String(await token.balanceOf(community.address)));
+
+    console.log("Deploying Community Treasury...");
+    
+    const CommunityTreasury = await ethers.getContractFactory("CommunityTreasury");
+    const communityTreasury = await CommunityTreasury.deploy(0, token.address);
+
+    console.log("Community Treasury address:", communityTreasury.address);
+
+    console.log("Linking Community Treasury to Community...");
+    await communityTreasury.setCommunity(community.address);
+    console.log("... and back");
+    await community.setTreasury(communityTreasury.address);
+
+    console.log("Deploying Treasury DAO...");
+    
+    const TreasuryDAO = await ethers.getContractFactory("TreasuryDao");
+    const treasuryDAO = await TreasuryDAO.deploy(addresses[network].aaveDataProvider);
+
+    console.log("Community Treasury address:", treasuryDAO.address);
+
+    console.log("Linking Community Treasury to DAO...");
+    await communityTreasury.setTreasuryDAO(treasuryDAO.address);
+    console.log("... and back");
+    await treasuryDAO.setCommunityTreasury(communityTreasury.address, 0);
 }
   
   main()
