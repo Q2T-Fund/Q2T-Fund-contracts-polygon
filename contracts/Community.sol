@@ -87,15 +87,16 @@ contract Community is BaseRelayRecipient, Ownable {
         depositableCurrencies.push("DAI");
         depositableCurrencies.push("USDC");
 
+        //kovan
         depositableCurrenciesContracts["DAI"] = address(
-            0xf80A32A835F79D7787E8a8ee5721D0fEaFd78108
+            0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD
         );
         depositableCurrenciesContracts["USDC"] = address(
-            0x07865c6E87B9F70255377e024ace6630C1Eaa37F
+            0xe22da380ee6B445bb8273C81944ADEB6E8450422
         );
 
         depositableACurrenciesContracts["DAI"] = address(
-            0xcB1Fe6F440c49E9290c3eb7f158534c2dC374201
+            0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8
         );
     }
 
@@ -338,6 +339,18 @@ contract Community is BaseRelayRecipient, Ownable {
 
         tokens.transfer(address(communityTreasury), _amount.mul(1e18));
         communityTreasury.completeGig(_amount);   
+    }
+
+    function borrowDelegated(uint256 _amount) public {
+        // Retrieve LendingPool address provide
+        ILendingPoolAddressesProvider provider = ILendingPoolAddressesProvider(
+            address(LENDING_POOL_AP)
+        ); // Ropsten address, for other addresses: https://docs.aave.com/developers/developing-on-aave/deployed-contract-instances
+        ILendingPool lendingPool = ILendingPool(provider.getLendingPool());
+        address delegator = address(communityTreasury.dao());
+        address asset = address(depositableCurrenciesContracts["DAI"]);
+
+        lendingPool.borrow(asset, _amount, 1, 0, delegator);
     }
 
     function _msgSender() internal view override(Context, BaseRelayRecipient) returns (address payable) {

@@ -18,16 +18,30 @@ import "./ICommunityTreasury.sol";
 import "./ITreasuryDao.sol";
 
 contract CommunityTreasury is ICommunityTreasury, Ownable {
+    using SafeMath for uint256;
+
     uint256 public constant THRESHOLD = 3840;
-    
+
+    mapping(string => address) public depositableCurrenciesContracts;
     DataTypes.CommunityType public communityType;
     address public community;
-    ITreasuryDao public dao;
+    ITreasuryDao public override dao;
     IDITOToken public token;
+    mapping (address => uint256) public depositors;
+    uint256 public totalDeposited;
 
     constructor(uint256 _type, address _token) {
         communityType = DataTypes.CommunityType(_type);
-        token = IDITOToken(token);
+        token = IDITOToken(_token);
+
+        //kovan
+        depositableCurrenciesContracts["DAI"] = address(
+            0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD
+        );
+
+        depositableCurrenciesContracts["USDC"] = address(
+            0xe22da380ee6B445bb8273C81944ADEB6E8450422
+        );
     }
     
     function setTreasuryDAO(address _dao) public override onlyOwner {
@@ -49,8 +63,28 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
         }
     }
 
-    function deposit(address _currency, uint256 _amount) public override {
+    function deposit(string memory _currency, uint256 _amount) public override {
+        require(address(dao) != address(0), "Treasury DAO is not set");
+        
+        address currencyAddress = address(
+            depositableCurrenciesContracts[_currency]
+        );
+        require(
+            currencyAddress != address(0),
+            "The currency passed as an argument is not enabled, sorry!"
+        );
+        IERC20 currency = IERC20(currencyAddress);
+        require(
+            currency.balanceOf(_msgSender()) <= _amount.mul(1e18),
+            "You don't have enough funds to invest."
+        );
 
+        currency.transferFrom(_msgSender(), address(this), _amount);
+        currency.approve(address(dao), _amount);
+        dao.deposit(currencyAddress, _amount, communityType);
+
+        depositors[_msgSender()].add(_amount);
+        totalDeposited.add(_amount);
     }
 
     function withdraw(address _currency, uint256 _amount) public override {

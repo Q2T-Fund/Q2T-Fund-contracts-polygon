@@ -8,6 +8,10 @@ module.exports = {
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {},
+    kovan: {
+      url: process.env.PROVIDER_URL_KOVAN,
+      accounts: [process.env.PRIVATE_KEY]
+    },
     mainnet: {
       url: process.env.PROVIDER_URL_MAIN,
       accounts: [process.env.PRIVATE_KEY]

@@ -10,6 +10,7 @@ import "./gsn/BaseRelayRecipient.sol";
 import './IProtocolDataProvider.sol';
 import './ICreditDelegationToken.sol';
 import "./ILendingPool.sol";
+import {ILendingPoolAddressesProvider} from './ILendingPoolAddressesProvider.sol';
 
 import "./ITreasuryDao.sol";
 
@@ -18,9 +19,11 @@ contract TreasuryDao is ITreasuryDao, Ownable {
 
     address[] public communities;
     IProtocolDataProvider public aaveProtocolDataProvider;
-    IERC20 public constant DAI = IERC20(0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa); //kovan
+    IERC20 public constant DAI = IERC20(0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD); //kovan
 
     constructor(address _aaveDataProvider) public {
+        require(_aaveDataProvider != address(0), "Aave data provider cannot be 0");
+
         communities = new address[](3);
         aaveProtocolDataProvider = IProtocolDataProvider(_aaveDataProvider);
     }
@@ -32,12 +35,19 @@ contract TreasuryDao is ITreasuryDao, Ownable {
     function thresholdReached(uint256 _amount, DataTypes.CommunityType _type) public override {
         require(msg.sender == communities[uint256(_type)]);
 
-        //should be quadratic distribution first
-        _delegate(msg.sender, address(DAI), _amount.mul(1e18));
+        //should be quadratic distribution first and delegation to different communities
+        _delegate(msg.sender, address(DAI), 99999999999999999999);
     }
 
-    function deposit(address _currency, uint256 _amount) public override {
+    function deposit(address _currency, uint256 _amount, DataTypes.CommunityType _type) public override {
+        require(msg.sender == communities[uint256(_type)]);
 
+        IERC20 currency = IERC20(_currency);
+        ILendingPool lendingPool = ILendingPool(aaveProtocolDataProvider.ADDRESSES_PROVIDER().getLendingPool());
+
+        currency.transferFrom(msg.sender,address(this), _amount);
+        currency.approve(address(lendingPool), _amount);
+        lendingPool.deposit(address(DAI), _amount, msg.sender, 0);
     }
 
     function withdraw(address _currency, uint256 _amount) public override {
