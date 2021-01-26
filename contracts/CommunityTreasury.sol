@@ -74,12 +74,12 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
             "The currency passed as an argument is not enabled, sorry!"
         );
         IERC20 currency = IERC20(currencyAddress);
+        uint256 amount = _amount.mul(1e18);
         require(
             currency.balanceOf(_msgSender()) >= _amount,
             "You don't have enough funds to invest."
         );
         
-        uint256 amount = _amount.mul(1e18);
         currency.transferFrom(_msgSender(), address(this), amount);
         currency.approve(address(dao), amount);
         dao.deposit(currencyAddress, amount, communityType);

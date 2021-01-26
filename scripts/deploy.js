@@ -23,6 +23,7 @@ async function main() {
     if(!addresses[network].token) {
         console.log("Deploying DITOTOken...");    
         token = await Token.deploy(tokenAmount);
+        await token.deployTransaction.wait();
     } else {
         console.log("Using exiting DITOToken");
         token = Token.attach(addresses[network].token);
@@ -33,6 +34,7 @@ async function main() {
   
     const Community = await ethers.getContractFactory("Community");
     const community = await Community.deploy("test", forwarder_address, token.address);
+    await community.deployTransaction.wait();
   
     console.log("Community address:", community.address);
 
@@ -49,6 +51,7 @@ async function main() {
     
     const CommunityTreasury = await ethers.getContractFactory("CommunityTreasury");
     const communityTreasury = await CommunityTreasury.deploy(0, token.address);
+    await communityTreasury.deployTransaction.wait();
 
     console.log("Community Treasury address:", communityTreasury.address);
 
@@ -61,6 +64,7 @@ async function main() {
     
     const TreasuryDAO = await ethers.getContractFactory("TreasuryDao");
     const treasuryDAO = await TreasuryDAO.deploy(addresses[network].aaveDataProvider);
+    await treasuryDAO.deployTransaction.wait();
 
     console.log("Treasury DAO address:", treasuryDAO.address);
 
