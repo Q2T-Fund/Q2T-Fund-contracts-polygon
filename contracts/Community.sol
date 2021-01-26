@@ -139,24 +139,23 @@ contract Community is BaseRelayRecipient, Ownable {
         _leave(_msgSender());
     }
 
-    function _leave(address member) private {
-        address msgSender = _msgSender();
-        require(enabledMembers[msgSender] == true, "You didn't even join!");
+    function _leave(address _member) private {
+        require(enabledMembers[_member] == true, "You didn't even join!");
 
-        enabledMembers[msgSender] = false;
+        enabledMembers[_member] = false;
         numberOfMembers = numberOfMembers.sub(1);
 
         // leaving user must first give allowance
         // then can call this
         tokens.transferFrom(
-            msgSender,
+            _member,
             address(this),
-            tokens.balanceOf(msgSender)
+            tokens.balanceOf(_member)
         );
 
-        tokens.removeFromWhitelist(msgSender);
+        tokens.removeFromWhitelist(_member);
 
-        emit MemberRemoved(msgSender);
+        emit MemberRemoved(_member);
     }
 
     /**
@@ -181,7 +180,7 @@ contract Community is BaseRelayRecipient, Ownable {
         );
         IERC20 currency = IERC20(currencyAddress);
         require(
-            currency.balanceOf(msgSender) <= _amount.mul(1e18),
+            currency.balanceOf(msgSender) >= _amount.mul(1e18),
             "You don't have enough funds to invest."
         );
 
@@ -244,7 +243,7 @@ contract Community is BaseRelayRecipient, Ownable {
 
         // Transfer currency
         require(
-            currency.balanceOf(address(this)) <= _amount.mul(1e18),
+            currency.balanceOf(address(this)) >= _amount.mul(1e18),
             "Amount to invest cannot be higher than deposited amount."
         );
 

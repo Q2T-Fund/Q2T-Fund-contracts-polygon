@@ -57,9 +57,9 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
 
         uint256 balance = token.balanceOf(address(this));
 
-        if (balance >= THRESHOLD) {
+        if (balance >= THRESHOLD.mul(1e18)) {
             token.transfer(community, SafeMath.mul(2000, 1e18));
-            dao.thresholdReached(balance, communityType); 
+            dao.thresholdReached(balance, community, communityType); 
         }
     }
 
@@ -75,16 +75,17 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
         );
         IERC20 currency = IERC20(currencyAddress);
         require(
-            currency.balanceOf(_msgSender()) <= _amount.mul(1e18),
+            currency.balanceOf(_msgSender()) >= _amount,
             "You don't have enough funds to invest."
         );
+        
+        uint256 amount = _amount.mul(1e18);
+        currency.transferFrom(_msgSender(), address(this), amount);
+        currency.approve(address(dao), amount);
+        dao.deposit(currencyAddress, amount, communityType);
 
-        currency.transferFrom(_msgSender(), address(this), _amount);
-        currency.approve(address(dao), _amount);
-        dao.deposit(currencyAddress, _amount, communityType);
-
-        depositors[_msgSender()].add(_amount);
-        totalDeposited.add(_amount);
+        depositors[_msgSender()].add(amount);
+        totalDeposited.add(amount);
     }
 
     function withdraw(address _currency, uint256 _amount) public override {

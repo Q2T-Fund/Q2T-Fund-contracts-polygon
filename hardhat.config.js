@@ -9,6 +9,7 @@ module.exports = {
   networks: {
     hardhat: {},
     kovan: {
+      chainId: 42,
       url: process.env.PROVIDER_URL_KOVAN,
       accounts: [process.env.PRIVATE_KEY]
     },

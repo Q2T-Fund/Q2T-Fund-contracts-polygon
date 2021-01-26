@@ -37,9 +37,11 @@ async function main() {
     console.log("Community address:", community.address);
 
     //tokenBalance = await token.balanceOf(deployer.address);
-    console.log("Transfering tokens and ownership to Community");
+    console.log("Whitelisting community");
     await token.addToWhitelist(community.address);
+    console.log("Transfering ownership to Community");
     await token.transferOwnership(community.address);
+    console.log("Transfering tokens to Community");
     await token.transfer(community.address, tokenAmount);
     console.log("Community balance: ", String(await token.balanceOf(community.address)));
 
@@ -60,7 +62,7 @@ async function main() {
     const TreasuryDAO = await ethers.getContractFactory("TreasuryDao");
     const treasuryDAO = await TreasuryDAO.deploy(addresses[network].aaveDataProvider);
 
-    console.log("Community Treasury address:", treasuryDAO.address);
+    console.log("Treasury DAO address:", treasuryDAO.address);
 
     console.log("Linking Community Treasury to DAO...");
     await communityTreasury.setTreasuryDAO(treasuryDAO.address);

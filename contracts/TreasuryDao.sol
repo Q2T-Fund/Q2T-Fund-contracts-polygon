@@ -32,11 +32,11 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         communities[uint256(_type)]=_communityTreasury;
     }
 
-    function thresholdReached(uint256 _amount, DataTypes.CommunityType _type) public override {
+    function thresholdReached(uint256 _amount, address _community, DataTypes.CommunityType _type) public override {
         require(msg.sender == communities[uint256(_type)]);
 
         //should be quadratic distribution first and delegation to different communities
-        _delegate(msg.sender, address(DAI), 99999999999999999999);
+        _delegate(_community, address(DAI), 999999999999999999999999999999);
     }
 
     function deposit(address _currency, uint256 _amount, DataTypes.CommunityType _type) public override {
@@ -47,7 +47,7 @@ contract TreasuryDao is ITreasuryDao, Ownable {
 
         currency.transferFrom(msg.sender,address(this), _amount);
         currency.approve(address(lendingPool), _amount);
-        lendingPool.deposit(address(DAI), _amount, msg.sender, 0);
+        lendingPool.deposit(address(DAI), _amount, address(this), 0);
     }
 
     function withdraw(address _currency, uint256 _amount) public override {
