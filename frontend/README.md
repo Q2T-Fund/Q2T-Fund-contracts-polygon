@@ -37,3 +37,15 @@ Feel free to reach us through this repository or
 Also you can [follow us on Twitter](https://twitter.com/HardhatHQ).
 
 **Happy _buidling_!**
+
+
+## Run local Ceramic IDX node 
+
+Run the following commands: 
+
+1. `npm install -g @ceramicnetwork/cli`
+2. `npm install -g  @ceramicstudio/idx-cli`
+3. `ceramic daemon`
+4. `idx bootstrap`
+5. `yarn bootstrap-idx`
+
