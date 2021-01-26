@@ -1,15 +1,16 @@
 import { Client, createUserAuth, PrivateKey, ThreadID } from '@textile/hub'
+require('dotenv').config();
 
 const skillWalletCollection = 'SkillWallet'
-const skillWalletThreadIDString = 'bafk42lwogxbt7moa7p7gdclynpvm3h7bnfnk56nzawnkftxdlkzmpri';
+const skillWalletThreadIDString = process.env.REACT_APP_TEXTILE_THREAD_ID
 
 const keyInfo = {
-	key: 'bzri276u6qt5ppotid4sscghagm',
-	secret: 'bzcdqwxlxuqfoc3adtcbyasff2ef6opt37s2ucwq'
+	key: process.env.REACT_APP_TEXTILE_KEY,
+	secret: process.env.REACT_APP_TEXTILE_SECRET
 }
 
 const skillWalletThreadID = ThreadID.fromString(skillWalletThreadIDString);
-const skillWalletPrivateKey = 'bbaareqg7v63j3muqpmq4t6ox34cjpsslnqaasaiazjgdmg357cvtdfdz3mxq57zmw5hrkq2asjaayyupuyniwrl74srouwy5d2sqq4tfzmhpq'
+const skillWalletPrivateKey = process.env.REACT_APP_TEXTILE_PRIV_KEY
 
 export async function initialize() {
 
@@ -54,14 +55,6 @@ async function auth(keyInfo) {
 	const userAuth = await createUserAuth(keyInfo.key, keyInfo.secret ?? '', expiration)
 	return userAuth
 }
-
-// interface Skill {
-//   skill: string;
-//   level: number;
-// }
-// interface SkillWallet {
-//   skillWallet: Skill[]
-// }
 
 const DiToSkillWalletSchema = {
 	"definitions": {},

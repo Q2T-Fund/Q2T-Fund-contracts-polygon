@@ -19,7 +19,6 @@ const DiToSkillWalletIDXSchema =
 const init = async () => {
 
     const ceramic = new Ceramic();
-    const ceramic = undefinded;
     const schema = await publishSchema(ceramic, { content: DiToSkillWalletIDXSchema, name: 'DiToSkillWallet' })
     const definition = await createDefinition(ceramic, {
         name: 'SkillWallet',
