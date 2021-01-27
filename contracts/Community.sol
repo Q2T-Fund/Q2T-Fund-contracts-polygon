@@ -14,7 +14,7 @@ import "./IAToken.sol";
 import "./IFiatTokenV2.sol";
 import "./ICommunityTreasury.sol";
 
-import "./IDITOToken.sol";
+import "./DITOToken.sol";
 import "./WadRayMath.sol";
 
 /**
@@ -51,10 +51,11 @@ contract Community is BaseRelayRecipient, Ownable {
     event MemberRemoved(address _member);
 
     //Aave Lending Pool Addresses Provider address
-    address public constant LENDING_POOL_AP=0x88757f2f99175387aB4C6a4b3067c77A695b0349; //kovan
+    address public constant LENDING_POOL_AP = 0x88757f2f99175387aB4C6a4b3067c77A695b0349; //kovan
+    uint256 public constant INIT_TOKENS = 96000;
     
     // The address of the DITOToken ERC20 contract
-    IDITOToken public tokens;
+    DITOToken public tokens;
 
     string public name;
     mapping(address => bool) public enabledMembers;
@@ -77,12 +78,12 @@ contract Community is BaseRelayRecipient, Ownable {
     // you are using from
     // https://docs.opengsn.org/gsn-provider/networks.html
     // 0x25CEd1955423BA34332Ec1B60154967750a0297D is ropsten's one
-    constructor(string memory _name, address _forwarder, address _token) public {
+    constructor(string memory _name, address _forwarder) public {
         name = _name;
         trustedForwarder = _forwarder;
         gigManager = _msgSender();
 
-        tokens = IDITOToken(_token);
+        tokens = new DITOToken(INIT_TOKENS.mul(1e18));
 
         depositableCurrencies.push("DAI");
         depositableCurrencies.push("USDC");

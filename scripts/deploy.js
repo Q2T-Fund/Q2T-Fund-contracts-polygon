@@ -7,8 +7,6 @@ async function main() {
     const network = hre.network.name;
     const [deployer] = await ethers.getSigners();
     const Token = await ethers.getContractFactory("DITOToken");
-    let token;
-    const tokenAmount = ethers.utils.parseEther("96000");
 
     const forwarder_address=addresses[network].forwarder;
     
@@ -20,31 +18,17 @@ async function main() {
     
     console.log("Account balance:", (await deployer.getBalance()).toString());
 
-    if(!addresses[network].token) {
-        console.log("Deploying DITOTOken...");    
-        token = await Token.deploy(tokenAmount);
-        await token.deployTransaction.wait();
-    } else {
-        console.log("Using exiting DITOToken");
-        token = Token.attach(addresses[network].token);
-    }
-    console.log("Token address:", token.address);
     console.log("Forwarder address:", forwarder_address);
-    console.log("Deploying Community...");
+    console.log("Deploying Community and DITO token...");
   
     const Community = await ethers.getContractFactory("Community");
-    const community = await Community.deploy("test", forwarder_address, token.address);
+    const community = await Community.deploy("test", forwarder_address);
     await community.deployTransaction.wait();
   
     console.log("Community address:", community.address);
+    const token = Token.attach(await community.tokens());
+    console.log("Token address:", await community.tokens());
 
-    //tokenBalance = await token.balanceOf(deployer.address);
-    console.log("Whitelisting community");
-    await token.addToWhitelist(community.address);
-    console.log("Transfering ownership to Community");
-    await token.transferOwnership(community.address);
-    console.log("Transfering tokens to Community");
-    await token.transfer(community.address, tokenAmount);
     console.log("Community balance: ", String(await token.balanceOf(community.address)));
 
     console.log("Deploying Community Treasury...");
