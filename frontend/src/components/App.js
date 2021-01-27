@@ -1,13 +1,12 @@
 import React, { useState } from "react";
-
 // ethers to interact with the Ethereum network and our contract
 import { ethers } from "ethers";
 
 // contract's artifacts and address here
-
 import ConnectWallet from './ConnectWallet'
 import NoWalletDetected from './NoWalletDetected'
-import { unstable_renderSubtreeIntoContainer } from "react-dom";
+import { SkillWallet } from "./skillWallet";
+
 
 // Here's a list of network ids https://docs.metamask.io/guide/ethereum-provider.html#properties
 // to use when deploying to other networks.
@@ -25,20 +24,27 @@ const App = () => {
 
 
     const _connectWallet = async () => {
-        const [selectedAddress] = await window.ethereum.enable()
-        
+        const addresses = await window.ethereum.enable()
+        await SkillWallet.init(addresses[0]);
+        await SkillWallet.store({
+            skillWallet: [{ skill: 'Teaching', level: 8 }, { skill: 'Gardening', level: 9 }]
+        });
+        const res = await SkillWallet.get();
+
+        console.log(res);
+
         // right now hardhat, changeable
         if (window.ethereum.networkVersion !== HARDHAT_NETWORK_ID) {
             setNetworkError("Please connect Metamask to Localhost:8545")
-        } 
-        
-        setAddress(selectedAddress)
-        _initializeEthers(selectedAddress)
+        }
 
-        
+        // setAddress(addresses)
+        _initializeEthers(address)
+
+
         // We reinitialize it whenever the user changes their account.
         window.ethereum.on("accountsChanged", ([newAddress]) => {
-            
+
             if (newAddress === undefined) {
                 setAddress(undefined)
             }
@@ -51,7 +57,7 @@ const App = () => {
     const _initializeEthers = async () => {
         const _provider = new ethers.providers.Web3Provider(window.ethereum);
 
-   		 {/*
+        {/*
         this._dito = new ethers.Contract({
             contractAddress.DiTo, 
             DiToArtifact.abi,
@@ -69,9 +75,9 @@ const App = () => {
 
     if (!address) {
         return (
-            <ConnectWallet 
-            connectWallet={() => _connectWallet()}
-            
+            <ConnectWallet
+                connectWallet={() => _connectWallet()}
+
             />
         )
     }
