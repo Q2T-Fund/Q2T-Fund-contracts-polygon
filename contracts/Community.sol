@@ -105,10 +105,10 @@ contract Community is BaseRelayRecipient, Ownable {
         require(_treasury != address(0), "Cannot set treasury to 0");
         
         if (address(communityTreasury) != address(0)) {
-            _leave(address(communityTreasury));
+            _leave(address(communityTreasury), true);
         }
         communityTreasury = ICommunityTreasury(_treasury);
-        _join(address(_treasury), 2000);
+        _join(address(_treasury), 2000, true);
     }
 
     /**
@@ -116,17 +116,17 @@ contract Community is BaseRelayRecipient, Ownable {
      * @param _amountOfDITOToRedeem the amount of dito tokens for which this user is eligible
      **/
      function join(uint256 _amountOfDITOToRedeem) public {
-         _join(_msgSender(), _amountOfDITOToRedeem);
+         _join(_msgSender(), _amountOfDITOToRedeem, false);
      }
 
-    function _join(address _member, uint256 _amountOfDITOToRedeem) internal {
+    function _join(address _member, uint256 _amountOfDITOToRedeem, bool _isTreasury) internal {
         require(address(communityTreasury) != address(0), "Community treasury is not set");
         require(numberOfMembers < 25, "There are already 24 members, sorry!"); //1st member is community treasure so there can actually be 25 members
         require(enabledMembers[_member] == false, "You already joined!");
 
         enabledMembers[_member] = true;
         numberOfMembers = numberOfMembers.add(1);
-        tokens.addToWhitelist(_member);
+        tokens.addToWhitelist(_member, _isTreasury);
 
         tokens.transfer(_member, _amountOfDITOToRedeem.mul(1e18));
 
@@ -137,10 +137,10 @@ contract Community is BaseRelayRecipient, Ownable {
      * @dev makes the calling user leave the community if required conditions are met
      **/
     function leave() public {
-        _leave(_msgSender());
+        _leave(_msgSender(), false);
     }
 
-    function _leave(address _member) private {
+    function _leave(address _member, bool _isTreasury) private {
         require(enabledMembers[_member] == true, "You didn't even join!");
 
         enabledMembers[_member] = false;
@@ -154,7 +154,7 @@ contract Community is BaseRelayRecipient, Ownable {
             tokens.balanceOf(_member)
         );
 
-        tokens.removeFromWhitelist(_member);
+        tokens.removeFromWhitelist(_member, _isTreasury);
 
         emit MemberRemoved(_member);
     }
@@ -337,7 +337,7 @@ contract Community is BaseRelayRecipient, Ownable {
     function completeGig(uint256 _amount) public {
         require(_msgSender() == gigManager, "Only gig manager can complete gig");
 
-        tokens.transfer(address(communityTreasury), _amount.mul(1e18));
+        tokens.approve(address(communityTreasury), _amount.mul(1e18));
         communityTreasury.completeGig(_amount);   
     }
 

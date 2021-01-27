@@ -39,10 +39,11 @@ async function main() {
 
     console.log("Community Treasury address:", communityTreasury.address);
 
-    console.log("Linking Community Treasury to Community...");
-    await communityTreasury.setCommunity(community.address);
-    console.log("... and back");
+    console.log("Linking Community to Treasury...");
     await community.setTreasury(communityTreasury.address);
+    console.log("... and back");
+    await communityTreasury.setCommunity(community.address);
+    
 
     console.log("Deploying Treasury DAO...");
     

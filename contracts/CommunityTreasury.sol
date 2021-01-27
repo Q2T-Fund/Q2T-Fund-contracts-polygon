@@ -54,11 +54,13 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     
     function setCommunity(address _community) public override onlyOwner {
         community = _community;
+        token.approve(community, type(uint256).max);
     }
 
     function completeGig(uint256 _amount) public override {
         require(_msgSender() == community, "Gig can only be completed by community");
-        
+
+        token.transferFrom(_msgSender(), address(this), _amount.mul(1e18));        
         uint256 balance = token.balanceOf(address(this));
 
         totalGigsCompleted.add(1);

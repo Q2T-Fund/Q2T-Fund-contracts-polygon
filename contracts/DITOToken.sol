@@ -15,6 +15,7 @@ contract DITOToken is ERC20, Ownable {
     event RemovedFromWhitelist(address _communityMember);
 
     mapping(address => bool) public whitelist;
+    address public treasury;
 
     modifier onlyInWhitelist(address _recipient) {
         require(whitelist[msg.sender], "sender not in whitelist");
@@ -31,7 +32,11 @@ contract DITOToken is ERC20, Ownable {
      * @dev Adds a community member to the whitelist, called by the join function of the Community contract
      * @param _communityMember the address of the new member of a Community to add to the whitelist
      **/
-    function addToWhitelist(address _communityMember) public onlyOwner {
+    function addToWhitelist(address _communityMember, bool _isTreasury) public onlyOwner {
+        if (_isTreasury) {
+            require(treasury == address(0), "treasury is already set");
+            treasury = _communityMember;
+        }
         whitelist[_communityMember] = true;
 
         emit AddedToWhitelist(_communityMember);
@@ -41,7 +46,11 @@ contract DITOToken is ERC20, Ownable {
      * @dev Removes a community member to the whitelist, called by the leave function of the Community contract
      * @param _communityMember the address of the leaving member of a Community
      **/
-    function removeFromWhitelist(address _communityMember) public onlyOwner {
+    function removeFromWhitelist(address _communityMember, bool _isTreasury) public onlyOwner {
+        if (_isTreasury) {
+            require(treasury == _communityMember, "member is not a treasury");
+            treasury = address(0);
+        }
         whitelist[_communityMember] = false;
 
         emit RemovedFromWhitelist(_communityMember);
@@ -70,6 +79,9 @@ contract DITOToken is ERC20, Ownable {
         address recipient,
         uint256 amount
     ) public override onlyInWhitelist(recipient) returns (bool) {
+        if (recipient == treasury) {
+            require (msg.sender == owner(), "only owner can send to treasury");
+        }
         return super.transferFrom(sender, recipient, amount);
     }
 
