@@ -21,6 +21,7 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     using SafeMath for uint256;
 
     uint256 public constant THRESHOLD = 3840;
+    address public constant LENDING_POOL_AP=0x88757f2f99175387aB4C6a4b3067c77A695b0349; //kovan
 
     mapping(string => address) public depositableCurrenciesContracts;
     DataTypes.CommunityType public communityType;
@@ -59,7 +60,7 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
 
         if (balance >= THRESHOLD.mul(1e18)) {
             token.transfer(community, SafeMath.mul(2000, 1e18));
-            dao.thresholdReached(balance, community, communityType); 
+            dao.thresholdReached(balance, communityType); 
         }
     }
 
@@ -90,5 +91,17 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
 
     function withdraw(address _currency, uint256 _amount) public override {
 
+    }
+
+    function borrowDelegated(uint256 _amount) public {
+        // Retrieve LendingPool address provide
+        ILendingPoolAddressesProvider provider = ILendingPoolAddressesProvider(
+            address(LENDING_POOL_AP)
+        ); // Ropsten address, for other addresses: https://docs.aave.com/developers/developing-on-aave/deployed-contract-instances
+        ILendingPool lendingPool = ILendingPool(provider.getLendingPool());
+        address asset = address(depositableCurrenciesContracts["DAI"]);
+
+        lendingPool.borrow(asset, _amount, 1, 0, address(dao));
+        //add distribute function
     }
 }

@@ -5,7 +5,7 @@ import {DataTypes} from './DataTypes.sol';
 
 interface ITreasuryDao {
     function setCommunityTreasury(address _communityTreasury, DataTypes.CommunityType _type) external;
-    function thresholdReached(uint256 _amount, address _community, DataTypes.CommunityType _type) external;
+    function thresholdReached(uint256 _amount, DataTypes.CommunityType _type) external;
 
     function deposit(address _currency, uint256 _amount, DataTypes.CommunityType _type) external;
     function withdraw(address _currency, uint256 _amount) external;

@@ -340,17 +340,7 @@ contract Community is BaseRelayRecipient, Ownable {
         communityTreasury.completeGig(_amount);   
     }
 
-    function borrowDelegated(uint256 _amount) public {
-        // Retrieve LendingPool address provide
-        ILendingPoolAddressesProvider provider = ILendingPoolAddressesProvider(
-            address(LENDING_POOL_AP)
-        ); // Ropsten address, for other addresses: https://docs.aave.com/developers/developing-on-aave/deployed-contract-instances
-        ILendingPool lendingPool = ILendingPool(provider.getLendingPool());
-        address delegator = address(communityTreasury.dao());
-        address asset = address(depositableCurrenciesContracts["DAI"]);
-
-        lendingPool.borrow(asset, _amount, 1, 0, delegator);
-    }
+    
 
     function _msgSender() internal view override(Context, BaseRelayRecipient) returns (address payable) {
         return BaseRelayRecipient._msgSender();
