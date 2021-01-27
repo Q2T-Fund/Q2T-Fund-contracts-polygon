@@ -16,8 +16,9 @@ contract DITOToken is ERC20, Ownable {
 
     mapping(address => bool) public whitelist;
 
-    modifier onlyInWhitelist() {
-        require(whitelist[msg.sender], "not in whitelist");
+    modifier onlyInWhitelist(address _recipient) {
+        require(whitelist[msg.sender], "sender not in whitelist");
+        require(whitelist[_recipient], "recepient not in whitelist");
         _;
     }
 
@@ -49,7 +50,7 @@ contract DITOToken is ERC20, Ownable {
     function transfer(address recipient, uint256 amount)
         public
         override
-        onlyInWhitelist
+        onlyInWhitelist(recipient)
         returns (bool)
     {
         return super.transfer(recipient, amount);
@@ -58,7 +59,7 @@ contract DITOToken is ERC20, Ownable {
     function approve(address spender, uint256 amount)
         public
         override
-        onlyInWhitelist
+        onlyInWhitelist(spender)
         returns (bool)
     {
         return super.approve(spender, amount);
@@ -68,14 +69,14 @@ contract DITOToken is ERC20, Ownable {
         address sender,
         address recipient,
         uint256 amount
-    ) public override onlyInWhitelist returns (bool) {
+    ) public override onlyInWhitelist(recipient) returns (bool) {
         return super.transferFrom(sender, recipient, amount);
     }
 
     function increaseAllowance(address spender, uint256 addedValue)
         public
         override
-        onlyInWhitelist
+        onlyInWhitelist(spender)
         returns (bool)
     {
         return super.increaseAllowance(spender, addedValue);
@@ -84,7 +85,7 @@ contract DITOToken is ERC20, Ownable {
     function decreaseAllowance(address spender, uint256 subtractedValue)
         public
         override
-        onlyInWhitelist
+        onlyInWhitelist(spender)
         returns (bool)
     {
         return super.decreaseAllowance(spender, subtractedValue);

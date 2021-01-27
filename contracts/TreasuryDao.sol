@@ -32,7 +32,7 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         communities[uint256(_type)]=_communityTreasury;
     }
 
-    function thresholdReached(uint256 _amount, DataTypes.CommunityType _type) public override {
+    function thresholdReached(DataTypes.CommunityType _type) public override {
         require(msg.sender == communities[uint256(_type)]);
 
         //should be quadratic distribution first and delegation to different communities
