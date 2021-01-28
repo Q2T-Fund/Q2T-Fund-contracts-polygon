@@ -51,8 +51,6 @@ contract Community is BaseRelayRecipient, Ownable {
      **/
     event MemberRemoved(address _member);
 
-    //Aave Lending Pool Addresses Provider address
-    address public constant LENDING_POOL_AP = 0x88757f2f99175387aB4C6a4b3067c77A695b0349; //kovan
     uint256 public constant INIT_TOKENS = 96000;
     
     // The address of the DITOToken ERC20 contract
@@ -66,6 +64,8 @@ contract Community is BaseRelayRecipient, Ownable {
     string[] public depositableCurrencies;
     CommunityTreasury public communityTreasury;
     address public gigManager;
+    ILendingPoolAddressesProvider public lendingPoolAP;
+
 
     modifier onlyEnabledCurrency(string memory _currency) {
         require(
@@ -79,13 +79,26 @@ contract Community is BaseRelayRecipient, Ownable {
     // you are using from
     // https://docs.opengsn.org/gsn-provider/networks.html
     // 0x25CEd1955423BA34332Ec1B60154967750a0297D is ropsten's one
-    constructor(DataTypes.CommunityType _type, address _forwarder) public {
+    constructor(
+        DataTypes.CommunityType _type, 
+        address _dai,
+        address _usdc,
+        address _lendingPoolAP, 
+        address _forwarder
+    ) public {
         communityType = _type;
         trustedForwarder = _forwarder;
         gigManager = _msgSender();
+        lendingPoolAP = ILendingPoolAddressesProvider(_lendingPoolAP);
 
         tokens = new DITOToken(INIT_TOKENS.mul(1e18));
-        communityTreasury = new CommunityTreasury(communityType, address(tokens));
+        communityTreasury = new CommunityTreasury(
+            communityType, 
+            address(tokens),
+            _dai,
+            _usdc,
+            _lendingPoolAP
+        );
 
         _join(address(communityTreasury), 2000, true);
         communityTreasury.approveCommunity();
@@ -93,17 +106,11 @@ contract Community is BaseRelayRecipient, Ownable {
         depositableCurrencies.push("DAI");
         depositableCurrencies.push("USDC");
 
-        //kovan
-        depositableCurrenciesContracts["DAI"] = address(
-            0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD
-        );
-        depositableCurrenciesContracts["USDC"] = address(
-            0xe22da380ee6B445bb8273C81944ADEB6E8450422
-        );
-
-        depositableACurrenciesContracts["DAI"] = address(
-            0xdCf0aF9e59C002FA3AA091a46196b37530FD48a8
-        );
+        depositableCurrenciesContracts["DAI"] = _dai;
+        depositableCurrenciesContracts["USDC"] = _usdc;
+        
+        ILendingPool lendingPool = ILendingPool(lendingPoolAP.getLendingPool());
+        depositableACurrenciesContracts["DAI"] = lendingPool.getReserveData(_dai).aTokenAddress;
     }
 
     function setTreasury(address _treasury) public onlyOwner {
@@ -261,11 +268,7 @@ contract Community is BaseRelayRecipient, Ownable {
             "Amount to invest cannot be higher than deposited amount."
         );
 
-        // Retrieve LendingPool address provide
-        ILendingPoolAddressesProvider provider = ILendingPoolAddressesProvider(
-            address(LENDING_POOL_AP)
-        ); // Ropsten address, for other addresses: https://docs.aave.com/developers/developing-on-aave/deployed-contract-instances
-        ILendingPool lendingPool = ILendingPool(provider.getLendingPool());
+        ILendingPool lendingPool = ILendingPool(lendingPoolAP.getLendingPool());
 
         uint256 amount = SafeMath.mul(10000000,1e18);
         uint16 referral = 0;
@@ -296,11 +299,7 @@ contract Community is BaseRelayRecipient, Ownable {
 
         address daiAddress = address(depositableCurrenciesContracts["DAI"]);
 
-        // Retrieve LendingPool address
-        ILendingPoolAddressesProvider provider = ILendingPoolAddressesProvider(
-            address(LENDING_POOL_AP)
-        ); // Ropsten address, for other addresses: https://docs.aave.com/developers/developing-on-aave/deployed-contract-instances
-        ILendingPool lendingPool = ILendingPool(provider.getLendingPool());
+        ILendingPool lendingPool = ILendingPool(lendingPoolAP.getLendingPool());
 
         // Client has to convert to balanceOf / 1e27
         uint256 daiLiquidityRate= lendingPool.getReserveData(daiAddress).currentLiquidityRate;
@@ -331,11 +330,7 @@ contract Community is BaseRelayRecipient, Ownable {
             depositableCurrenciesContracts[_currency]
         );
         
-        // Retrieve LendingPool address provide
-        ILendingPoolAddressesProvider provider = ILendingPoolAddressesProvider(
-            address(LENDING_POOL_AP)
-        ); // Ropsten address, for other addresses: https://docs.aave.com/developers/developing-on-aave/deployed-contract-instances
-        ILendingPool lendingPool = ILendingPool(provider.getLendingPool());
+        ILendingPool lendingPool = ILendingPool(lendingPoolAP.getLendingPool());
 
         //TODO: update the check for V2 protocol
         /*if (aCurrency.isTransferAllowed(address(this), _amount.mul(1e18)) == false)

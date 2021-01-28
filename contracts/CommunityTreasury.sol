@@ -22,8 +22,8 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
 
     uint256 public constant THRESHOLD = 3840;
     uint256 public constant SENDBACK = 2000;
-    address public constant LENDING_POOL_AP=0x88757f2f99175387aB4C6a4b3067c77A695b0349; //kovan
 
+    ILendingPoolAddressesProvider public lendingPoolAP;
     mapping(string => address) public depositableCurrenciesContracts;
     DataTypes.CommunityType public communityType;
     address public community;
@@ -34,19 +34,22 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     uint256 public totalGigsCompleted;
     uint256 public totalTokensReceived;
 
-    constructor(DataTypes.CommunityType _type, address _token) {
+    constructor(
+        DataTypes.CommunityType _type, 
+        address _token, 
+        address _dai, 
+        address _usdc, 
+        address _lendingPoolAP
+    ) {
         community = _msgSender();
         communityType = DataTypes.CommunityType(_type);
         token = IDITOToken(_token);
+        lendingPoolAP = ILendingPoolAddressesProvider(_lendingPoolAP);
 
         //kovan
-        depositableCurrenciesContracts["DAI"] = address(
-            0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD
-        );
+        depositableCurrenciesContracts["DAI"] = _dai;
 
-        depositableCurrenciesContracts["USDC"] = address(
-            0xe22da380ee6B445bb8273C81944ADEB6E8450422
-        );
+        depositableCurrenciesContracts["USDC"] = _usdc;
     }
     
     function setTreasuryDAO(address _dao) public override onlyOwner {
@@ -106,11 +109,7 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     }
 
     function borrowDelegated(uint256 _amount) public {
-        // Retrieve LendingPool address provide
-        ILendingPoolAddressesProvider provider = ILendingPoolAddressesProvider(
-            address(LENDING_POOL_AP)
-        ); // Ropsten address, for other addresses: https://docs.aave.com/developers/developing-on-aave/deployed-contract-instances
-        ILendingPool lendingPool = ILendingPool(provider.getLendingPool());
+        ILendingPool lendingPool = ILendingPool(lendingPoolAP.getLendingPool());
         address asset = address(depositableCurrenciesContracts["DAI"]);
 
         lendingPool.borrow(asset, _amount, 1, 0, address(dao));

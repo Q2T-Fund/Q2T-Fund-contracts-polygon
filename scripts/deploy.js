@@ -8,8 +8,10 @@ async function main() {
     const [deployer] = await ethers.getSigners();
     const Token = await ethers.getContractFactory("DITOToken");
 
-    const forwarder_address=addresses[network].forwarder;
-    
+    const forwarder_address = addresses[network].forwarder;
+    const dai = addresses[network].dai;
+    const usdc = addresses[network].usdc;
+    const landingPoolAP = addresses[network].landingPoolAP;
   
     console.log(
       "Deploying contracts with the account:",
@@ -19,10 +21,10 @@ async function main() {
     console.log("Account balance:", (await deployer.getBalance()).toString());
 
     console.log("Forwarder address:", forwarder_address);
-    console.log("Deploying Community and DITO token...");
+    console.log("Deploying Community...");
   
     const Community = await ethers.getContractFactory("Community");
-    const community = await Community.deploy(0, forwarder_address);
+    const community = await Community.deploy(0, dai, usdc, landingPoolAP, forwarder_address);
     await community.deployTransaction.wait();
   
     console.log("Community address:", community.address);
@@ -49,7 +51,7 @@ async function main() {
     console.log("Deploying Treasury DAO...");
     
     const TreasuryDAO = await ethers.getContractFactory("TreasuryDao");
-    const treasuryDAO = await TreasuryDAO.deploy(addresses[network].aaveDataProvider);
+    const treasuryDAO = await TreasuryDAO.deploy(addresses[network].aaveDataProvider, dai);
     await treasuryDAO.deployTransaction.wait();
 
     console.log("Treasury DAO address:", treasuryDAO.address);

@@ -21,11 +21,12 @@ contract TreasuryDao is ITreasuryDao, Ownable {
     address[] public communities;
     mapping(address => uint256)[] communityATokens; //address is underlying asset;
     IProtocolDataProvider public aaveProtocolDataProvider;
-    IERC20 public constant DAI = IERC20(0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD); //kovan
+    IERC20 public dai;
 
-    constructor(address _aaveDataProvider) public {
+    constructor(address _aaveDataProvider, address _dai) public {
         require(_aaveDataProvider != address(0), "Aave data provider cannot be 0");
 
+        dai = IERC20(_dai);
         communities = new address[](3);
         aaveProtocolDataProvider = IProtocolDataProvider(_aaveDataProvider);
     }
@@ -38,7 +39,7 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         require(msg.sender == communities[uint256(_type)]);
 
         //should be quadratic distribution first and delegation to different communities
-        _delegate(msg.sender, address(DAI), 999999999999999999999999999999);
+        _delegate(msg.sender, address(dai), type(uint256).max);
     }
 
     function deposit(address _currency, uint256 _amount, DataTypes.CommunityType _type) public override {
@@ -52,7 +53,7 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         uint256 aBalanceBefore = aToken.balanceOf(address(this));
         currency.transferFrom(msg.sender,address(this), _amount);
         currency.approve(address(lendingPool), _amount);
-        lendingPool.deposit(address(DAI), _amount, address(this), 0);
+        lendingPool.deposit(_currency, _amount, address(this), 0);
         uint256 aBalanceAfter = aToken.balanceOf(address(this));
         communityATokens[uint256(_type)][_currency].add(aBalanceAfter.sub(aBalanceBefore));
     }
