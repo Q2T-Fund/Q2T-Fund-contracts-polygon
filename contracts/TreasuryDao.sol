@@ -40,10 +40,15 @@ contract TreasuryDao is ITreasuryDao, Ownable {
     }
 
     function linkCommunity(address _treasuryAddress) public override onlyOwner {
+        ICommunityTreasury communityTreasury = ICommunityTreasury(_treasuryAddress);
+
+        require(communityTreasury.template() == template, "template mismatch");
+        require(address(communityTreasury.dao()) == address(this), "dao mismatch");
+
         communityTeasuries[totalCommunities] = _treasuryAddress;
         isTreasuryActive[_treasuryAddress] = true;
-        ICommunityTreasury(_treasuryAddress).setId(1);
-        totalCommunities.add(1);
+        communityTreasury.setId(totalCommunities);
+        totalCommunities = totalCommunities.add(1);
     }
 
     function thresholdReached(uint256 _id) public override {
@@ -76,7 +81,7 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         IAToken aToken = IAToken(aTokenAddress);
         
         uint256 aBalanceBefore = aToken.balanceOf(address(this));
-        currency.transferFrom(msg.sender,address(this), amount);
+        currency.transferFrom(msg.sender, address(this), amount);
         currency.approve(address(lendingPool), amount);
         lendingPool.deposit(currencyAddress, amount, address(this), 0);
         uint256 aBalanceAfter = aToken.balanceOf(address(this));

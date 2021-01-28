@@ -51,7 +51,7 @@ async function main() {
     console.log("Deploying Treasury DAO...");
     
     const TreasuryDAO = await ethers.getContractFactory("TreasuryDao");
-    const treasuryDAO = await TreasuryDAO.deploy(addresses[network].aaveDataProvider, dai, usdc);
+    const treasuryDAO = await TreasuryDAO.deploy(0, addresses[network].aaveDataProvider, dai, usdc);
     await treasuryDAO.deployTransaction.wait();
 
     console.log("Treasury DAO address:", treasuryDAO.address);
@@ -59,7 +59,7 @@ async function main() {
     console.log("Linking Community Treasury to DAO...");
     await community.setTreasuryDAO(treasuryDAO.address);
     console.log("... and back");
-    await treasuryDAO.setCommunityTreasury(communityTreasury.address, 0);
+    await treasuryDAO.linkCommunity(communityTreasury.address);
 }
   
   main()

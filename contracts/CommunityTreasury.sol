@@ -28,7 +28,7 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     mapping(string => address) public depositableCurrenciesContracts;
     uint256 public id;
     bool idSet;
-    DataTypes.CommunityTemplate public template;
+    DataTypes.CommunityTemplate public override template;
     address public community;
     ITreasuryDao public override dao;
     IDITOToken public token;

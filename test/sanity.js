@@ -40,14 +40,16 @@ describe("Deposit and borrow happy flow", function() {
     });
     it("Should deploy and link treasury dao", async function() {
         const TreasuryDAO = await ethers.getContractFactory("TreasuryDao");
-        treasuryDAO = await TreasuryDAO.deploy(addresses[network].aaveDataProvider, dai, usdc);
+        treasuryDAO = await TreasuryDAO.deploy(0, addresses[network].aaveDataProvider, dai, usdc);
         await treasuryDAO.deployed;
         
         await community.setTreasuryDAO(treasuryDAO.address);
-        await treasuryDAO.setCommunityTreasury(communityTreasury.address, 0);
+        await treasuryDAO.linkCommunity(communityTreasury.address);
         
+        expect(await communityTreasury.id()).to.equal("0");
+        expect(await treasuryDAO.totalCommunities()).to.equal("1");
         expect(await communityTreasury.dao()).to.equal(treasuryDAO.address);
-        expect(await treasuryDAO.communities(0)).to.equal(communityTreasury.address);
+        expect(await treasuryDAO.communityTeasuries(0)).to.equal(communityTreasury.address);
     });
     it("Should deposit DAI through community treasry", async function() {
         await hre.network.provider.request({
@@ -61,11 +63,11 @@ describe("Deposit and borrow happy flow", function() {
         const daiToken = Erc20.attach(dai);
         const adaiToken = Erc20.attach(adai);
 
-        const CommunityTreasury = await ethers.getContractFactory("CommunityTreasury", signer);
-        const communityTreasuryImp = CommunityTreasury.attach(community.communityTreasury());
+        const TreasuryDao = await ethers.getContractFactory("TreasuryDao", signer);
+        const treasuryDaoImp = TreasuryDao.attach(treasuryDAO.address);
 
-        await daiToken.approve(communityTreasuryImp.address, "1000".concat(e18));
-        await communityTreasuryImp.deposit("DAI", 1000);
+        await daiToken.approve(treasuryDaoImp.address, "1000".concat(e18));
+        await treasuryDaoImp.deposit("DAI", 1000);
 
         expect(await adaiToken.balanceOf(treasuryDAO.address)).to.equal("1000".concat(e18));
     });

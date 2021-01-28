@@ -2,9 +2,11 @@
 pragma solidity ^0.7.4;
 
 import "./ITreasuryDao.sol";
+import {DataTypes} from './DataTypes.sol';
 
 interface ICommunityTreasury {
     function dao() external view returns (ITreasuryDao);
+    function template() external view returns (DataTypes.CommunityTemplate);
 
     function setTreasuryDAO(address _dao) external;
     function setCommunity(address _community) external;
