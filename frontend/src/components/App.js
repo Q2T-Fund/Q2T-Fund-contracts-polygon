@@ -5,6 +5,8 @@ import { ethers } from "ethers";
 // contract's artifacts and address here
 import ConnectWallet from './ConnectWallet'
 import NoWalletDetected from './NoWalletDetected'
+import HomePage from "./HomePage"
+
 import { SkillWallet } from "./skillWallet";
 
 
@@ -40,8 +42,6 @@ const App = () => {
 
         // setAddress(addresses)
         _initializeEthers(address)
-
-
         // We reinitialize it whenever the user changes their account.
         window.ethereum.on("accountsChanged", ([newAddress]) => {
 
@@ -75,10 +75,8 @@ const App = () => {
 
     if (!address) {
         return (
-            <ConnectWallet
-                connectWallet={() => _connectWallet()}
-
-            />
+            //<ConnectWallet connectWallet={() => _connectWallet()}/>
+            <HomePage walletConnect={_connectWallet} />
         )
     }
 
