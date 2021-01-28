@@ -19,14 +19,16 @@ contract TreasuryDao is ITreasuryDao, Ownable {
     using SafeMath for uint256;
 
     address[] public communities;
-    mapping(address => uint256)[] communityATokens; //address is underlying asset;
+    mapping (DataTypes.CommunityType => mapping (address => uint256)) communityATokens; //address is underlying asset;
     IProtocolDataProvider public aaveProtocolDataProvider;
     IERC20 public dai;
+    IERC20 public usdc;
 
-    constructor(address _aaveDataProvider, address _dai) public {
+    constructor(address _aaveDataProvider, address _dai, address _usdc) public {
         require(_aaveDataProvider != address(0), "Aave data provider cannot be 0");
 
         dai = IERC20(_dai);
+        usdc = IERC20(_usdc);
         communities = new address[](3);
         aaveProtocolDataProvider = IProtocolDataProvider(_aaveDataProvider);
     }
@@ -40,6 +42,7 @@ contract TreasuryDao is ITreasuryDao, Ownable {
 
         //should be quadratic distribution first and delegation to different communities
         _delegate(msg.sender, address(dai), type(uint256).max);
+        _delegate(msg.sender, address(usdc), type(uint256).max);
     }
 
     function deposit(address _currency, uint256 _amount, DataTypes.CommunityType _type) public override {
@@ -55,7 +58,7 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         currency.approve(address(lendingPool), _amount);
         lendingPool.deposit(_currency, _amount, address(this), 0);
         uint256 aBalanceAfter = aToken.balanceOf(address(this));
-        communityATokens[uint256(_type)][_currency].add(aBalanceAfter.sub(aBalanceBefore));
+        communityATokens[_type][_currency].add(aBalanceAfter.sub(aBalanceBefore));
     }
 
     function withdraw(address _currency, uint256 _amount) public override {

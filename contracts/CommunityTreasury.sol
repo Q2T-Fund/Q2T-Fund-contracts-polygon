@@ -108,9 +108,11 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
 
     }
 
-    function borrowDelegated(uint256 _amount) public {
+    function borrowDelegated(string memory _currency, uint256 _amount) public {
         ILendingPool lendingPool = ILendingPool(lendingPoolAP.getLendingPool());
-        address asset = address(depositableCurrenciesContracts["DAI"]);
+        address asset = address(depositableCurrenciesContracts[_currency]);
+
+        require(asset != address(0), "currency not supported");
 
         lendingPool.borrow(asset, _amount, 1, 0, address(dao));
         //add distribute function

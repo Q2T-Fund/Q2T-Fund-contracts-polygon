@@ -19,7 +19,7 @@ contract DITOToken is ERC20, Ownable {
 
     modifier onlyInWhitelist(address _recipient) {
         require(whitelist[msg.sender], "sender not in whitelist");
-        require(whitelist[_recipient], "recepient not in whitelist");
+        require(whitelist[_recipient], "recipient not in whitelist");
         _;
     }
 
@@ -80,7 +80,7 @@ contract DITOToken is ERC20, Ownable {
         uint256 amount
     ) public override onlyInWhitelist(recipient) returns (bool) {
         if (recipient == treasury) {
-            require (msg.sender == owner(), "only owner can send to treasury");
+            require (msg.sender == treasury, "not sent from treasury");
         }
         return super.transferFrom(sender, recipient, amount);
     }

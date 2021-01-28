@@ -51,7 +51,7 @@ async function main() {
     console.log("Deploying Treasury DAO...");
     
     const TreasuryDAO = await ethers.getContractFactory("TreasuryDao");
-    const treasuryDAO = await TreasuryDAO.deploy(addresses[network].aaveDataProvider, dai);
+    const treasuryDAO = await TreasuryDAO.deploy(addresses[network].aaveDataProvider, dai, usdc);
     await treasuryDAO.deployTransaction.wait();
 
     console.log("Treasury DAO address:", treasuryDAO.address);
