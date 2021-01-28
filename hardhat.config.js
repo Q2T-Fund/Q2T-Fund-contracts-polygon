@@ -7,7 +7,12 @@ require("@nomiclabs/hardhat-waffle");
 module.exports = {
   defaultNetwork: "hardhat",
   networks: {
-    hardhat: {},
+    hardhat: {
+      forking: {
+        url: process.env.ALCHEMY_URL,
+        blockNumber: Number(process.env.ALCHEMY_BLOCK)
+      }
+    },
     kovan: {
       chainId: 42,
       url: process.env.PROVIDER_URL_KOVAN,

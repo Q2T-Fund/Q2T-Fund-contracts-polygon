@@ -12,7 +12,8 @@ import "./ILendingPoolAddressesProvider.sol";
 import "./ILendingPool.sol";
 import "./IAToken.sol";
 import "./IFiatTokenV2.sol";
-import "./ICommunityTreasury.sol";
+import "./CommunityTreasury.sol";
+import {DataTypes} from './DataTypes.sol';
 
 import "./DITOToken.sol";
 import "./WadRayMath.sol";
@@ -57,13 +58,13 @@ contract Community is BaseRelayRecipient, Ownable {
     // The address of the DITOToken ERC20 contract
     DITOToken public tokens;
 
-    string public name;
+    DataTypes.CommunityType public communityType;
     mapping(address => bool) public enabledMembers;
     uint256 public numberOfMembers;
     mapping(string => address) public depositableCurrenciesContracts;
     mapping(string => address) public depositableACurrenciesContracts;
     string[] public depositableCurrencies;
-    ICommunityTreasury public communityTreasury;
+    CommunityTreasury public communityTreasury;
     address public gigManager;
 
     modifier onlyEnabledCurrency(string memory _currency) {
@@ -78,12 +79,16 @@ contract Community is BaseRelayRecipient, Ownable {
     // you are using from
     // https://docs.opengsn.org/gsn-provider/networks.html
     // 0x25CEd1955423BA34332Ec1B60154967750a0297D is ropsten's one
-    constructor(string memory _name, address _forwarder) public {
-        name = _name;
+    constructor(DataTypes.CommunityType _type, address _forwarder) public {
+        communityType = _type;
         trustedForwarder = _forwarder;
         gigManager = _msgSender();
 
         tokens = new DITOToken(INIT_TOKENS.mul(1e18));
+        communityTreasury = new CommunityTreasury(communityType, address(tokens));
+
+        _join(address(communityTreasury), 2000, true);
+        communityTreasury.approveCommunity();
 
         depositableCurrencies.push("DAI");
         depositableCurrencies.push("USDC");
@@ -107,8 +112,16 @@ contract Community is BaseRelayRecipient, Ownable {
         if (address(communityTreasury) != address(0)) {
             _leave(address(communityTreasury), true);
         }
-        communityTreasury = ICommunityTreasury(_treasury);
+        communityTreasury = CommunityTreasury(_treasury);
         _join(address(_treasury), 2000, true);
+    }
+
+    function setTreasuryDAO(address _dao) public onlyOwner {
+        communityTreasury.setTreasuryDAO(_dao);
+    }
+    
+    function setCommunity(address _community) public onlyOwner {
+        communityTreasury.setCommunity(_community);
     }
 
     /**

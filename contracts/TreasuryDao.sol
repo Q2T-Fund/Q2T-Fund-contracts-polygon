@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./gsn/BaseRelayRecipient.sol";
 
+import "./IAToken.sol";
 import './IProtocolDataProvider.sol';
 import './ICreditDelegationToken.sol';
 import "./ILendingPool.sol";
@@ -18,6 +19,7 @@ contract TreasuryDao is ITreasuryDao, Ownable {
     using SafeMath for uint256;
 
     address[] public communities;
+    mapping(address => uint256)[] communityATokens; //address is underlying asset;
     IProtocolDataProvider public aaveProtocolDataProvider;
     IERC20 public constant DAI = IERC20(0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD); //kovan
 
@@ -44,10 +46,15 @@ contract TreasuryDao is ITreasuryDao, Ownable {
 
         IERC20 currency = IERC20(_currency);
         ILendingPool lendingPool = ILendingPool(aaveProtocolDataProvider.ADDRESSES_PROVIDER().getLendingPool());
-
+        (address aTokenAddress,,) = aaveProtocolDataProvider.getReserveTokensAddresses(_currency);
+        IAToken aToken = IAToken(aTokenAddress);
+        
+        uint256 aBalanceBefore = aToken.balanceOf(address(this));
         currency.transferFrom(msg.sender,address(this), _amount);
         currency.approve(address(lendingPool), _amount);
         lendingPool.deposit(address(DAI), _amount, address(this), 0);
+        uint256 aBalanceAfter = aToken.balanceOf(address(this));
+        communityATokens[uint256(_type)][_currency].add(aBalanceAfter.sub(aBalanceBefore));
     }
 
     function withdraw(address _currency, uint256 _amount) public override {

@@ -34,7 +34,8 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     uint256 public totalGigsCompleted;
     uint256 public totalTokensReceived;
 
-    constructor(uint256 _type, address _token) {
+    constructor(DataTypes.CommunityType _type, address _token) {
+        community = _msgSender();
         communityType = DataTypes.CommunityType(_type);
         token = IDITOToken(_token);
 
@@ -54,6 +55,10 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     
     function setCommunity(address _community) public override onlyOwner {
         community = _community;
+        token.approve(community, type(uint256).max);
+    }
+
+    function approveCommunity() public {
         token.approve(community, type(uint256).max);
     }
 

@@ -22,7 +22,7 @@ async function main() {
     console.log("Deploying Community and DITO token...");
   
     const Community = await ethers.getContractFactory("Community");
-    const community = await Community.deploy("test", forwarder_address);
+    const community = await Community.deploy(0, forwarder_address);
     await community.deployTransaction.wait();
   
     console.log("Community address:", community.address);
@@ -31,18 +31,19 @@ async function main() {
 
     console.log("Community balance: ", String(await token.balanceOf(community.address)));
 
-    console.log("Deploying Community Treasury...");
+    //console.log("Deploying Community Treasury...");
     
     const CommunityTreasury = await ethers.getContractFactory("CommunityTreasury");
-    const communityTreasury = await CommunityTreasury.deploy(0, token.address);
-    await communityTreasury.deployTransaction.wait();
+    //const communityTreasury = await CommunityTreasury.deploy(0, token.address);
+    //await communityTreasury.deployTransaction.wait();
+    const communityTreasury = CommunityTreasury.attach(await community.communityTreasury());
 
     console.log("Community Treasury address:", communityTreasury.address);
 
-    console.log("Linking Community to Treasury...");
+    /*console.log("Linking Community to Treasury...");
     await community.setTreasury(communityTreasury.address);
     console.log("... and back");
-    await communityTreasury.setCommunity(community.address);
+    await communityTreasury.setCommunity(community.address);*/
     
 
     console.log("Deploying Treasury DAO...");
@@ -54,7 +55,7 @@ async function main() {
     console.log("Treasury DAO address:", treasuryDAO.address);
 
     console.log("Linking Community Treasury to DAO...");
-    await communityTreasury.setTreasuryDAO(treasuryDAO.address);
+    await community.setTreasuryDAO(treasuryDAO.address);
     console.log("... and back");
     await treasuryDAO.setCommunityTreasury(communityTreasury.address, 0);
 }
