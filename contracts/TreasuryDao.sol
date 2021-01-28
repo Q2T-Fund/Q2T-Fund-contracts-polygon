@@ -14,7 +14,7 @@ import "./ILendingPool.sol";
 //import {ILendingPoolAddressesProvider} from './ILendingPoolAddressesProvider.sol';
 
 import "./ITreasuryDao.sol";
-import "./Community.sol";
+import "./ICommunityTreasury.sol";
 
 contract TreasuryDao is ITreasuryDao, Ownable {
     using SafeMath for uint256;
@@ -39,25 +39,11 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         aaveProtocolDataProvider = IProtocolDataProvider(_aaveDataProvider);
     }
 
-    function addCommunity(address _forwarder, address _community) public override onlyOwner returns (address, address) {
-        address lendingPoolAP = address(aaveProtocolDataProvider.ADDRESSES_PROVIDER());
-        /*Community community = new Community(
-            totalCommunities,
-            template, 
-            depositableCurrenciesContracts["DAI"],
-            depositableCurrenciesContracts["USDC"],
-            lendingPoolAP, 
-            _forwarder
-        );*/
-
-        Community community = Community(_community);
-        community.transferOwnership(msg.sender);
-        address treasuryAddress = address(community.communityTreasury());
-        communityTeasuries[totalCommunities] = treasuryAddress;
-        isTreasuryActive[treasuryAddress] = true;
+    function linkCommunity(address _treasuryAddress) public override onlyOwner {
+        communityTeasuries[totalCommunities] = _treasuryAddress;
+        isTreasuryActive[_treasuryAddress] = true;
+        ICommunityTreasury(_treasuryAddress).setId(1);
         totalCommunities.add(1);
-
-        return (address(community), treasuryAddress);
     }
 
     function thresholdReached(uint256 _id) public override {

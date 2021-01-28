@@ -4,7 +4,7 @@ pragma solidity ^0.7.4;
 import {DataTypes} from './DataTypes.sol';
 
 interface ITreasuryDao {
-    function addCommunity(address _forwarder, address _community) external returns (address community, address communityTreasury);    
+    function linkCommunity(address _treasuryAddress) external;    
     function thresholdReached(uint256 _id) external;
 
     function deposit(string memory _currency, uint256 _amount) external;

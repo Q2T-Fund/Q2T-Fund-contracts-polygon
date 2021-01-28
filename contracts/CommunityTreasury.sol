@@ -16,6 +16,7 @@ import {DataTypes} from './DataTypes.sol';
 import "./IDITOToken.sol";
 import "./ICommunityTreasury.sol";
 import "./ITreasuryDao.sol";
+import "./Community.sol";
 
 contract CommunityTreasury is ICommunityTreasury, Ownable {
     using SafeMath for uint256;
@@ -26,6 +27,7 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     ILendingPoolAddressesProvider public lendingPoolAP;
     mapping(string => address) public depositableCurrenciesContracts;
     uint256 public id;
+    bool idSet;
     DataTypes.CommunityTemplate public template;
     address public community;
     ITreasuryDao public override dao;
@@ -34,7 +36,6 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     uint256 public totalTokensReceived;
 
     constructor(
-        uint256 _id,
         DataTypes.CommunityTemplate _template, 
         address _token,
         address _dao, 
@@ -43,7 +44,7 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
         address _lendingPoolAP
     ) {
         community = _msgSender();
-        id = _id;
+        idSet = false;
         template = _template;
         token = IDITOToken(_token);
         dao = ITreasuryDao(_dao);
@@ -54,11 +55,24 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
         depositableCurrenciesContracts["USDC"] = _usdc;
     }
     
+    function setId(uint256 _id) public override {
+        require(msg.sender == address(dao), "only treasury dao can set id");
+        require(!idSet, "treasury is already linked");
+        require(community != address(0), "community is not set");
+
+        id = _id;
+        idSet = true;
+
+        Community(community).setId(id);
+    }
+
     function setTreasuryDAO(address _dao) public override onlyOwner {
+        require(!idSet, "treasury is already linked");
         dao = ITreasuryDao(_dao);
     }
     
     function setCommunity(address _community) public override onlyOwner {
+        require(!idSet, "treasury is already linked");
         community = _community;
         token.approve(community, type(uint256).max);
     }

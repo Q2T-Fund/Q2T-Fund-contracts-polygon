@@ -57,6 +57,7 @@ contract Community is BaseRelayRecipient, Ownable {
     DITOToken public tokens;
 
     uint256 public id;
+    bool idSet;
     DataTypes.CommunityTemplate public template;
     mapping(address => bool) public enabledMembers;
     uint256 public numberOfMembers;
@@ -81,14 +82,13 @@ contract Community is BaseRelayRecipient, Ownable {
     // https://docs.opengsn.org/gsn-provider/networks.html
     // 0x25CEd1955423BA34332Ec1B60154967750a0297D is ropsten's one
     constructor(
-        uint256 _id,
         DataTypes.CommunityTemplate _template, 
         address _dai,
         address _usdc,
         address _lendingPoolAP, 
         address _forwarder
     ) {
-        id = _id;
+        idSet = false;
         template = _template;
         trustedForwarder = _forwarder;
         gigManager = _msgSender();
@@ -96,7 +96,6 @@ contract Community is BaseRelayRecipient, Ownable {
 
         tokens = new DITOToken(INIT_TOKENS.mul(1e18));
         communityTreasury = new CommunityTreasury(
-            id,
             template, 
             address(tokens),
             msg.sender,
@@ -118,7 +117,16 @@ contract Community is BaseRelayRecipient, Ownable {
         depositableACurrenciesContracts["DAI"] = lendingPool.getReserveData(_dai).aTokenAddress;
     }
 
+    function setId(uint256 _id) public {
+        require(msg.sender == address(communityTreasury), "only treasury can set id");
+        require(!idSet, "community is already linked");
+
+        id = _id;
+        idSet = true;
+    }
+
     function setTreasury(address _treasury) public onlyOwner {
+        require(!idSet, "community is already linked");
         require(_treasury != address(0), "Cannot set treasury to 0");
         
         if (address(communityTreasury) != address(0)) {
