@@ -23,7 +23,7 @@ contract DITOToken is ERC20, Ownable {
         _;
     }
 
-    constructor(uint256 initialSupply) public ERC20("DiTo", "DITO") {
+    constructor(uint256 initialSupply) ERC20("DiTo", "DITO") {
         whitelist[msg.sender] = true;
         _mint(msg.sender, initialSupply);
     }

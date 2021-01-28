@@ -5,60 +5,98 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "./gsn/BaseRelayRecipient.sol";
+//import "./gsn/BaseRelayRecipient.sol";
 
 import "./IAToken.sol";
 import './IProtocolDataProvider.sol';
 import './ICreditDelegationToken.sol';
 import "./ILendingPool.sol";
-import {ILendingPoolAddressesProvider} from './ILendingPoolAddressesProvider.sol';
+//import {ILendingPoolAddressesProvider} from './ILendingPoolAddressesProvider.sol';
 
 import "./ITreasuryDao.sol";
+import "./Community.sol";
 
 contract TreasuryDao is ITreasuryDao, Ownable {
     using SafeMath for uint256;
 
-    address[] public communities;
-    mapping (DataTypes.CommunityType => mapping (address => uint256)) communityATokens; //address is underlying asset;
+    mapping (uint256 => address) public communityTeasuries;
+    mapping (address => bool) public isTreasuryActive;
+    uint256 public totalCommunities;
+    mapping(string => address) public depositableCurrenciesContracts;
+    mapping (address => mapping (address => uint256)) depositorATokens; //address is underlying asset;
     IProtocolDataProvider public aaveProtocolDataProvider;
-    IERC20 public dai;
-    IERC20 public usdc;
+    DataTypes.CommunityTemplate public template;
 
-    constructor(address _aaveDataProvider, address _dai, address _usdc) public {
+    mapping (address => uint256) public depositors;
+    uint256 public totalDeposited;
+
+    constructor(DataTypes.CommunityTemplate _template, address _aaveDataProvider, address _dai, address _usdc) {
         require(_aaveDataProvider != address(0), "Aave data provider cannot be 0");
 
-        dai = IERC20(_dai);
-        usdc = IERC20(_usdc);
-        communities = new address[](3);
+        depositableCurrenciesContracts["DAI"] = _dai;
+        depositableCurrenciesContracts["USDC"] = _usdc;
+        template = _template;
         aaveProtocolDataProvider = IProtocolDataProvider(_aaveDataProvider);
     }
 
-    function setCommunityTreasury(address _communityTreasury, DataTypes.CommunityType _type) public override onlyOwner {
-        communities[uint256(_type)]=_communityTreasury;
+    function addCommunity(address _forwarder, address _community) public override onlyOwner returns (address, address) {
+        address lendingPoolAP = address(aaveProtocolDataProvider.ADDRESSES_PROVIDER());
+        /*Community community = new Community(
+            totalCommunities,
+            template, 
+            depositableCurrenciesContracts["DAI"],
+            depositableCurrenciesContracts["USDC"],
+            lendingPoolAP, 
+            _forwarder
+        );*/
+
+        Community community = Community(_community);
+        community.transferOwnership(msg.sender);
+        address treasuryAddress = address(community.communityTreasury());
+        communityTeasuries[totalCommunities] = treasuryAddress;
+        isTreasuryActive[treasuryAddress] = true;
+        totalCommunities.add(1);
+
+        return (address(community), treasuryAddress);
     }
 
-    function thresholdReached(DataTypes.CommunityType _type) public override {
-        require(msg.sender == communities[uint256(_type)]);
+    function thresholdReached(uint256 _id) public override {
+        require(msg.sender == communityTeasuries[_id], "wrong id");
+        require(isTreasuryActive[msg.sender], "treasury is not active");
 
         //should be quadratic distribution first and delegation to different communities
-        _delegate(msg.sender, address(dai), type(uint256).max);
-        _delegate(msg.sender, address(usdc), type(uint256).max);
+        _delegate(msg.sender, depositableCurrenciesContracts["DAI"], type(uint256).max);
+        _delegate(msg.sender, depositableCurrenciesContracts["USDC"], type(uint256).max);
     }
 
-    function deposit(address _currency, uint256 _amount, DataTypes.CommunityType _type) public override {
-        require(msg.sender == communities[uint256(_type)]);
-
-        IERC20 currency = IERC20(_currency);
+    function deposit(string memory _currency, uint256 _amount) public override {
+        require(totalCommunities > 0, "no communy treasury added");
+        address currencyAddress = address(
+            depositableCurrenciesContracts[_currency]
+        );
+        require(
+            currencyAddress != address(0),
+            "The currency passed as an argument is not enabled, sorry!"
+        );
+        IERC20 currency = IERC20(currencyAddress);
+        uint256 amount = _amount.mul(1e18);
+        require(
+            currency.balanceOf(_msgSender()) >= amount,
+            "You don't have enough funds to invest."
+        );
+        
         ILendingPool lendingPool = ILendingPool(aaveProtocolDataProvider.ADDRESSES_PROVIDER().getLendingPool());
-        (address aTokenAddress,,) = aaveProtocolDataProvider.getReserveTokensAddresses(_currency);
+        (address aTokenAddress,,) = aaveProtocolDataProvider.getReserveTokensAddresses(currencyAddress);
         IAToken aToken = IAToken(aTokenAddress);
         
         uint256 aBalanceBefore = aToken.balanceOf(address(this));
-        currency.transferFrom(msg.sender,address(this), _amount);
-        currency.approve(address(lendingPool), _amount);
-        lendingPool.deposit(_currency, _amount, address(this), 0);
+        currency.transferFrom(msg.sender,address(this), amount);
+        currency.approve(address(lendingPool), amount);
+        lendingPool.deposit(currencyAddress, amount, address(this), 0);
         uint256 aBalanceAfter = aToken.balanceOf(address(this));
-        communityATokens[_type][_currency].add(aBalanceAfter.sub(aBalanceBefore));
+        depositorATokens[msg.sender][currencyAddress].add(aBalanceAfter.sub(aBalanceBefore));
+        depositors[msg.sender].add(amount);
+        totalDeposited.add(amount);
     }
 
     function withdraw(address _currency, uint256 _amount) public override {

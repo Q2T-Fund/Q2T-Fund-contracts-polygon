@@ -56,7 +56,8 @@ contract Community is BaseRelayRecipient, Ownable {
     // The address of the DITOToken ERC20 contract
     DITOToken public tokens;
 
-    DataTypes.CommunityType public communityType;
+    uint256 public id;
+    DataTypes.CommunityTemplate public template;
     mapping(address => bool) public enabledMembers;
     uint256 public numberOfMembers;
     mapping(string => address) public depositableCurrenciesContracts;
@@ -80,21 +81,25 @@ contract Community is BaseRelayRecipient, Ownable {
     // https://docs.opengsn.org/gsn-provider/networks.html
     // 0x25CEd1955423BA34332Ec1B60154967750a0297D is ropsten's one
     constructor(
-        DataTypes.CommunityType _type, 
+        uint256 _id,
+        DataTypes.CommunityTemplate _template, 
         address _dai,
         address _usdc,
         address _lendingPoolAP, 
         address _forwarder
-    ) public {
-        communityType = _type;
+    ) {
+        id = _id;
+        template = _template;
         trustedForwarder = _forwarder;
         gigManager = _msgSender();
         lendingPoolAP = ILendingPoolAddressesProvider(_lendingPoolAP);
 
         tokens = new DITOToken(INIT_TOKENS.mul(1e18));
         communityTreasury = new CommunityTreasury(
-            communityType, 
+            id,
+            template, 
             address(tokens),
+            msg.sender,
             _dai,
             _usdc,
             _lendingPoolAP

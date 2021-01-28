@@ -47,7 +47,7 @@ library DataTypes {
 
   enum InterestRateMode {NONE, STABLE, VARIABLE}
 
-  enum CommunityType {
+  enum CommunityTemplate {
         OPENSOURCE,
         ART,
         LOCAL

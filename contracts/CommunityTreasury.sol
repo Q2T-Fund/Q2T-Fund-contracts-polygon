@@ -25,28 +25,30 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
 
     ILendingPoolAddressesProvider public lendingPoolAP;
     mapping(string => address) public depositableCurrenciesContracts;
-    DataTypes.CommunityType public communityType;
+    uint256 public id;
+    DataTypes.CommunityTemplate public template;
     address public community;
     ITreasuryDao public override dao;
     IDITOToken public token;
-    mapping (address => uint256) public depositors;
-    uint256 public totalDeposited;
     uint256 public totalGigsCompleted;
     uint256 public totalTokensReceived;
 
     constructor(
-        DataTypes.CommunityType _type, 
-        address _token, 
+        uint256 _id,
+        DataTypes.CommunityTemplate _template, 
+        address _token,
+        address _dao, 
         address _dai, 
         address _usdc, 
         address _lendingPoolAP
     ) {
         community = _msgSender();
-        communityType = DataTypes.CommunityType(_type);
+        id = _id;
+        template = _template;
         token = IDITOToken(_token);
+        dao = ITreasuryDao(_dao);
         lendingPoolAP = ILendingPoolAddressesProvider(_lendingPoolAP);
 
-        //kovan
         depositableCurrenciesContracts["DAI"] = _dai;
 
         depositableCurrenciesContracts["USDC"] = _usdc;
@@ -61,7 +63,7 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
         token.approve(community, type(uint256).max);
     }
 
-    function approveCommunity() public {
+    function approveCommunity() public override {
         token.approve(community, type(uint256).max);
     }
 
@@ -74,34 +76,13 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
         totalGigsCompleted.add(1);
         totalTokensReceived.add(_amount);
         if (balance >= THRESHOLD.mul(1e18)) {
-            dao.thresholdReached(communityType); 
+            dao.thresholdReached(id); 
             token.transfer(community, SENDBACK.mul(1e18));
         }
     }
 
     function deposit(string memory _currency, uint256 _amount) public override {
-        require(address(dao) != address(0), "Treasury DAO is not set");
         
-        address currencyAddress = address(
-            depositableCurrenciesContracts[_currency]
-        );
-        require(
-            currencyAddress != address(0),
-            "The currency passed as an argument is not enabled, sorry!"
-        );
-        IERC20 currency = IERC20(currencyAddress);
-        uint256 amount = _amount.mul(1e18);
-        require(
-            currency.balanceOf(_msgSender()) >= _amount,
-            "You don't have enough funds to invest."
-        );
-        
-        currency.transferFrom(_msgSender(), address(this), amount);
-        currency.approve(address(dao), amount);
-        dao.deposit(currencyAddress, amount, communityType);
-
-        depositors[_msgSender()].add(amount);
-        totalDeposited.add(amount);
     }
 
     function withdraw(address _currency, uint256 _amount) public override {

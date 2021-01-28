@@ -4,10 +4,10 @@ pragma solidity ^0.7.4;
 import {DataTypes} from './DataTypes.sol';
 
 interface ITreasuryDao {
-    function setCommunityTreasury(address _communityTreasury, DataTypes.CommunityType _type) external;
-    function thresholdReached(DataTypes.CommunityType _type) external;
+    function addCommunity(address _forwarder, address _community) external returns (address community, address communityTreasury);    
+    function thresholdReached(uint256 _id) external;
 
-    function deposit(address _currency, uint256 _amount, DataTypes.CommunityType _type) external;
+    function deposit(string memory _currency, uint256 _amount) external;
     function withdraw(address _currency, uint256 _amount) external;
     function delegate(address _currency, uint256 _amount, address _deligatee) external;
     function undelegate(address _currency, address _deligatee, bool _force) external; //_force to undelegate even if there is outstanding borrowed amt
