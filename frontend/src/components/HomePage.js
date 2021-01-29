@@ -73,7 +73,7 @@ function X01IWantTo(props) {
           <Grid>
             <Grid.Row>
               <Image src={metamask} size="tiny"></Image>
-              <Button size="massive" color="grey" onClick={props.walletConnect()}>Metamask</Button>
+              <Button size="massive" color="grey" onClick={props.walletConnect}>Metamask</Button>
             </Grid.Row>
             <Grid.Row >
               <Image src={skillwallet} size="tiny" />
@@ -84,7 +84,7 @@ function X01IWantTo(props) {
       </Modal>
     )
   }
-  
+
   const {
     spanText,
     spanText2,
@@ -122,9 +122,9 @@ function X01IWantTo(props) {
         <Image2 image2={image2Props.image2} />
         <h1 className="i-want-to raleway-semi-bold-black-40px">{iWantTo}</h1>
         <div className="auto-flex">
-          
-                {modal1()}    
-                {modal2()}        
+
+                {modal1()}
+                {modal2()}
 
         </div>
       </div>
