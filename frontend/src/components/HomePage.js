@@ -1,15 +1,16 @@
 import React, { useState } from "react";
 import './HomePage.css'
 import { Button, Modal, Header, Icon, Grid, Image } from 'semantic-ui-react'
+import ConnectWalletModal from './ConnectWallet'
 
 import metamask from '../assets/metamask.svg'
 import skillwallet from '../assets/skillwallet.png'
 import newuser from '../assets/newuser.png'
 
-const HomePage = ({ walletConnect }) => {
+const HomePage = () => {
 
   return (
-  <X01IWantTo {...X01IWantToData} walletConnect={walletConnect} />
+  <X01IWantTo {...X01IWantToData} />
   );
 }
 
@@ -122,10 +123,8 @@ function X01IWantTo(props) {
         <Image2 image2={image2Props.image2} />
         <h1 className="i-want-to raleway-semi-bold-black-40px">{iWantTo}</h1>
         <div className="auto-flex">
-
-                {modal1()}
-                {modal2()}
-
+          {modal1()}
+          {modal2()}
         </div>
       </div>
     </div>
@@ -142,6 +141,7 @@ const image2Data = {
     image2: "https://anima-uploads.s3.amazonaws.com/projects/60126ea786f83e0fcc799456/releases/60126ec431580128926bc3d9/img/image-2-1@1x.png",
 };
 
+// We could import this as JSON from a separate file
 const X01IWantToData = {
     spanText: "Quadratic Treasury",
     spanText2: " (",
