@@ -4,6 +4,10 @@ pragma solidity ^0.7.4;
 import {DataTypes} from './DataTypes.sol';
 
 interface ITreasuryDao {
+    event CommunityLinked(address _treasuryAddress, address _communityAddress, uint256 _id);
+    event ThresholdReached(uint256 _id);
+    event Deposited(address _depositor, string _currency, uint256 _amount);
+
     function linkCommunity(address _treasuryAddress) external;    
     function thresholdReached(uint256 _id) external;
 

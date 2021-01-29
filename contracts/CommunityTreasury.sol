@@ -29,7 +29,7 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     uint256 public id;
     bool idSet;
     DataTypes.CommunityTemplate public override template;
-    address public community;
+    address public override community;
     ITreasuryDao public override dao;
     IDITOToken public token;
     uint256 public totalGigsCompleted;
@@ -63,25 +63,31 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
         id = _id;
         idSet = true;
 
+        emit IdSet(_id);
+
         Community(community).setId(id);
     }
 
     function setTreasuryDAO(address _dao) public override onlyOwner {
         require(!idSet, "treasury is already linked");
         dao = ITreasuryDao(_dao);
+
+        emit TreasuryDaoSet(_dao);
     }
     
     function setCommunity(address _community) public override onlyOwner {
         require(!idSet, "treasury is already linked");
         community = _community;
         token.approve(community, type(uint256).max);
+
+        emit CommunitySet(_community);
     }
 
     function approveCommunity() public override {
         token.approve(community, type(uint256).max);
     }
 
-    function completeGig(uint256 _amount) public override {
+    function completeMilestone(uint256 _amount) public override {
         require(_msgSender() == community, "Gig can only be completed by community");
 
         token.transferFrom(_msgSender(), address(this), _amount.mul(1e18));        
@@ -90,8 +96,12 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
         totalGigsCompleted.add(1);
         totalTokensReceived.add(_amount);
         if (balance >= THRESHOLD.mul(1e18)) {
-            dao.thresholdReached(id); 
+            dao.thresholdReached(id);
+            emit MilesoteComplete(_amount);
+            emit ThersholdReached(getDitoBalance());
             token.transfer(community, SENDBACK.mul(1e18));
+        } else {
+            emit MilesoteComplete(_amount);
         }
     }
 
@@ -103,7 +113,7 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
 
     }
 
-    function borrowDelegated(string memory _currency, uint256 _amount) public {
+    function borrowDelegated(string memory _currency, uint256 _amount) public override {
         ILendingPool lendingPool = ILendingPool(lendingPoolAP.getLendingPool());
         address asset = address(depositableCurrenciesContracts[_currency]);
 
@@ -111,9 +121,11 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
 
         lendingPool.borrow(asset, _amount, 1, 0, address(dao));
         //add distribute function
+
+        emit Borrowed(_currency, _amount);
     }
 
-    function getDitoBalance() public view returns (uint256) {
+    function getDitoBalance() public override view returns (uint256) {
         return token.balanceOf(address(this));
     }
 }

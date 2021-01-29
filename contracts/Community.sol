@@ -50,6 +50,8 @@ contract Community is BaseRelayRecipient, Ownable {
      * @param _member the user which just left the community
      **/
     event MemberRemoved(address _member);
+    event IdSet(uint256 _id);
+    event TreasurySet(address _treasury);
 
     uint256 public constant INIT_TOKENS = 96000;
     
@@ -123,6 +125,8 @@ contract Community is BaseRelayRecipient, Ownable {
 
         id = _id;
         idSet = true;
+
+        emit IdSet(_id);
     }
 
     function setTreasury(address _treasury) public onlyOwner {
@@ -134,6 +138,8 @@ contract Community is BaseRelayRecipient, Ownable {
         }
         communityTreasury = CommunityTreasury(_treasury);
         _join(address(_treasury), 2000, true);
+
+        emit TreasurySet(_treasury);
     }
 
     function setTreasuryDAO(address _dao) public onlyOwner {
@@ -359,7 +365,7 @@ contract Community is BaseRelayRecipient, Ownable {
         require(_msgSender() == gigManager, "Only gig manager can complete gig");
 
         tokens.approve(address(communityTreasury), _amount.mul(1e18));
-        communityTreasury.completeGig(_amount);   
+        communityTreasury.completeMilestone(_amount);   
     }
 
     

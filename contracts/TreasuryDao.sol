@@ -21,7 +21,7 @@ contract TreasuryDao is ITreasuryDao, Ownable {
 
     mapping (uint256 => address) public communityTeasuries;
     mapping (address => bool) public isTreasuryActive;
-    uint256 public totalCommunities;
+    uint256 public nextId;
     mapping(string => address) public depositableCurrenciesContracts;
     mapping (address => mapping (address => uint256)) depositorATokens; //address is underlying asset;
     IProtocolDataProvider public aaveProtocolDataProvider;
@@ -45,10 +45,13 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         require(communityTreasury.template() == template, "template mismatch");
         require(address(communityTreasury.dao()) == address(this), "dao mismatch");
 
-        communityTeasuries[totalCommunities] = _treasuryAddress;
+        communityTeasuries[nextId] = _treasuryAddress;
         isTreasuryActive[_treasuryAddress] = true;
-        communityTreasury.setId(totalCommunities);
-        totalCommunities = totalCommunities.add(1);
+        communityTreasury.setId(nextId);
+
+        emit CommunityLinked(_treasuryAddress, communityTreasury.community(), nextId);
+
+        nextId = nextId.add(1);
     }
 
     function thresholdReached(uint256 _id) public override {
@@ -58,10 +61,12 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         //should be quadratic distribution first and delegation to different communities
         _delegate(msg.sender, depositableCurrenciesContracts["DAI"], type(uint256).max);
         _delegate(msg.sender, depositableCurrenciesContracts["USDC"], type(uint256).max);
+
+        emit ThresholdReached(_id);
     }
 
     function deposit(string memory _currency, uint256 _amount) public override {
-        require(totalCommunities > 0, "no communy treasury added");
+        require(nextId > 0, "no communy treasury added");
         address currencyAddress = address(
             depositableCurrenciesContracts[_currency]
         );
@@ -88,6 +93,8 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         depositorATokens[msg.sender][currencyAddress].add(aBalanceAfter.sub(aBalanceBefore));
         depositors[msg.sender].add(amount);
         totalDeposited.add(amount);
+
+        emit Deposited(msg.sender, _currency, _amount);
     }
 
     function withdraw(address _currency, uint256 _amount) public override {
