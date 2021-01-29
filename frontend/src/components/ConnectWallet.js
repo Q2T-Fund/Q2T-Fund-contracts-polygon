@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 // ethers to interact with the Ethereum network and our contract
 import { ethers } from "ethers";
 
@@ -6,7 +6,7 @@ import NetworkErrorMessage from './NetworkErrorMessage'
 import { SkillWallet } from "./skillWallet";
 
 
-export async function connectWallet() {
+export async function connectWallet(address, setAddress, networkError, setNetworkError) {
 
   // Here's a list of network ids https://docs.metamask.io/guide/ethereum-provider.html#properties
   // to use when deploying to other networks.
@@ -15,8 +15,6 @@ export async function connectWallet() {
   // This is an error code that indicates that the user canceled a transaction
   const ERROR_CODE_TX_REJECTED_BY_USER = 4001;
 
-  const [address, setAddress] = useState(undefined)
-  const [networkError, setNetworkError] = useState(undefined)
   const _initializeEthers = async () => {
     const _provider = new ethers.providers.Web3Provider(window.ethereum);
 

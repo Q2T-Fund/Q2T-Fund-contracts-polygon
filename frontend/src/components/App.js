@@ -9,7 +9,7 @@ const App = () => {
     // TO DO: use ConnectWallet.js to update the state of the app
     // in this fashion:
     // const { address } = state
-    // instead of being sourced from a function
+    // instead of being sourced from the useState function
     const [address, setAddress] = useState(undefined)
 
     if (window.ethereum === undefined) {
