@@ -51,7 +51,7 @@ describe("Deposit and borrow happy flow", function() {
         expect(await communityTreasury.dao()).to.equal(treasuryDAO.address);
         expect(await treasuryDAO.communityTeasuries(0)).to.equal(communityTreasury.address);
     });
-    it("Should deposit DAI through community treasry", async function() {
+    it("Should deposit DAI through treasry dao to aave", async function() {
         await hre.network.provider.request({
             method: "hardhat_impersonateAccount",
             params: [process.env.IMPERSONATE]

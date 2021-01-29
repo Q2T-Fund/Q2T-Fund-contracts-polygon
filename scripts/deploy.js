@@ -12,6 +12,8 @@ async function main() {
     const dai = addresses[network].dai;
     const usdc = addresses[network].usdc;
     const landingPoolAP = addresses[network].landingPoolAP;
+
+    console.log("Deploying to network: ", network);
   
     console.log(
       "Deploying contracts with the account:",
