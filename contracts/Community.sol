@@ -13,6 +13,7 @@ import "./ILendingPool.sol";
 import "./IAToken.sol";
 import "./IFiatTokenV2.sol";
 import "./CommunityTreasury.sol";
+import "./GigsRegistry.sol";
 import {DataTypes} from './DataTypes.sol';
 
 import "./DITOToken.sol";
@@ -67,7 +68,7 @@ contract Community is BaseRelayRecipient, Ownable {
     mapping(string => address) public depositableACurrenciesContracts;
     string[] public depositableCurrencies;
     CommunityTreasury public communityTreasury;
-    address public gigManager;
+    GigsRegistry public gigsRegistry;
     ILendingPoolAddressesProvider public lendingPoolAP;
 
 
@@ -93,7 +94,6 @@ contract Community is BaseRelayRecipient, Ownable {
         idSet = false;
         template = _template;
         trustedForwarder = _forwarder;
-        gigManager = _msgSender();
         lendingPoolAP = ILendingPoolAddressesProvider(_lendingPoolAP);
 
         tokens = new DITOToken(INIT_TOKENS.mul(1e18));
@@ -117,6 +117,12 @@ contract Community is BaseRelayRecipient, Ownable {
         
         ILendingPool lendingPool = ILendingPool(lendingPoolAP.getLendingPool());
         depositableACurrenciesContracts["DAI"] = lendingPool.getReserveData(_dai).aTokenAddress;
+    }
+
+    function createGigsRegistry() public onlyOwner {
+        require(address(gigsRegistry) == address(0), "gig registry already created");
+
+        gigsRegistry = new GigsRegistry();
     }
 
     function setId(uint256 _id) public {
@@ -362,10 +368,12 @@ contract Community is BaseRelayRecipient, Ownable {
     }
 
     function completeGig(uint256 _amount, address _project) public {
-        require(_msgSender() == gigManager, "Only gig manager can complete gig");
+        require(_msgSender() == address(gigsRegistry), "Only gig manager can complete gig");
 
-        tokens.approve(address(communityTreasury), _amount.mul(1e18));
-        communityTreasury.completeMilestone(_amount);   
+        if(_project != address(0)) {
+            tokens.approve(address(communityTreasury), _amount.mul(1e18));
+            communityTreasury.completeMilestone(_amount, _project);   
+        }
     }
 
     

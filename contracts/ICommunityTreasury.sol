@@ -8,7 +8,7 @@ interface ICommunityTreasury {
     event TreasuryDaoSet(address _dao);
     event CommunitySet(address _community);
     event IdSet(uint256 _id);
-    event MilesoteComplete(uint256 _amount);
+    event MilesoteComplete(uint256 _amount, address _project);
     event ThersholdReached(uint256 _amount);
     event Borrowed(string _currency, uint256 _amount);
 
@@ -20,7 +20,7 @@ interface ICommunityTreasury {
     function setCommunity(address _community) external;
     function setId(uint256 _id) external;
     function approveCommunity() external;
-    function completeMilestone(uint256 _amount) external;
+    function completeMilestone(uint256 _amount, address _project) external;
     function getDitoBalance() external view returns (uint256);
     function borrowDelegated(string memory _currency, uint256 _amount) external;
 

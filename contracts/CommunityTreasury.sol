@@ -22,7 +22,7 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     using SafeMath for uint256;
 
     uint256 public constant THRESHOLD = 3840;
-    uint256 public constant SENDBACK = 2000;
+    uint256 public constant MINAMOUNT = 2000;
 
     ILendingPoolAddressesProvider public lendingPoolAP;
     mapping(string => address) public depositableCurrenciesContracts;
@@ -34,6 +34,8 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     IDITOToken public token;
     uint256 public totalGigsCompleted;
     uint256 public totalTokensReceived;
+    address[] public projects;
+    mapping(address => uint256) public projectCredits;
 
     constructor(
         DataTypes.CommunityTemplate _template, 
@@ -87,21 +89,25 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
         token.approve(community, type(uint256).max);
     }
 
-    function completeMilestone(uint256 _amount) public override {
+    function completeMilestone(uint256 _amount, address _project) public override {
         require(_msgSender() == community, "Gig can only be completed by community");
+        require(_project != address(0), "no project for milestone");
 
         token.transferFrom(_msgSender(), address(this), _amount.mul(1e18));        
         uint256 balance = token.balanceOf(address(this));
+        projectCredits[_project] = projectCredits[_project].add(_amount);
 
         totalGigsCompleted.add(1);
         totalTokensReceived.add(_amount);
         if (balance >= THRESHOLD.mul(1e18)) {
+            uint256 sendback = balance.sub(MINAMOUNT.mul(1e18));
+
             dao.thresholdReached(id);
-            emit MilesoteComplete(_amount);
+            emit MilesoteComplete(_amount, _project);
             emit ThersholdReached(getDitoBalance());
-            token.transfer(community, SENDBACK.mul(1e18));
+            token.transfer(community, sendback);
         } else {
-            emit MilesoteComplete(_amount);
+            emit MilesoteComplete(_amount, _project);
         }
     }
 
@@ -121,11 +127,20 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
 
         lendingPool.borrow(asset, _amount, 1, 0, address(dao));
         //add distribute function
+        _resetProjects();
 
         emit Borrowed(_currency, _amount);
     }
 
     function getDitoBalance() public override view returns (uint256) {
         return token.balanceOf(address(this));
+    }
+
+    function _resetProjects() internal {
+        for (uint256 i; i < projects.length; i++) {
+            delete projectCredits[projects[i]];
+        }
+
+        delete projects;
     }
 }
