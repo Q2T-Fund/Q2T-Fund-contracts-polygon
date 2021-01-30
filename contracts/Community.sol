@@ -361,7 +361,7 @@ contract Community is BaseRelayRecipient, Ownable {
         lendingPool.withdraw(currencyAddress, _amount.mul(1e18), msg.sender);
     }
 
-    function completeGig(uint256 _amount) public {
+    function completeGig(uint256 _amount, address _project) public {
         require(_msgSender() == gigManager, "Only gig manager can complete gig");
 
         tokens.approve(address(communityTreasury), _amount.mul(1e18));

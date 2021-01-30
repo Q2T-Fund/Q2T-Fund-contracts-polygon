@@ -16,7 +16,8 @@ module.exports = {
     kovan: {
       chainId: 42,
       url: process.env.PROVIDER_URL_KOVAN,
-      accounts: [process.env.PRIVATE_KEY]
+      accounts: [process.env.PRIVATE_KEY],
+      gas: 9500000
     },
     mainnet: {
       url: process.env.PROVIDER_URL_MAIN,

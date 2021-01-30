@@ -52,4 +52,18 @@ library DataTypes {
         ART,
         LOCAL
     }
+
+  enum GigStatus {
+    NONE,
+    CREATED,
+    COMPLETED,
+    CANCELED
+  }
+
+  struct Gig {
+    address creator;
+    GigStatus status;
+    bool isMilestone;
+    bytes32 gigHash;
+  }
 }
