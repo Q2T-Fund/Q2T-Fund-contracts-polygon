@@ -17,7 +17,7 @@ import "./GigsRegistry.sol";
 import {DataTypes} from './DataTypes.sol';
 
 import "./DITOToken.sol";
-import "./WadRayMath.sol";
+//import "./WadRayMath.sol";
 
 /**
  * @title DistributedTown Community
@@ -29,16 +29,7 @@ contract Community is BaseRelayRecipient, Ownable {
     string public override versionRecipient = "2.0.0";
 
     using SafeMath for uint256;
-    using WadRayMath for uint256;
-
-    struct UsdcData {
-        uint256 validAfter;
-        uint256 validBefore;
-        bytes32 nonce;
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-    }
+    //using WadRayMath for uint256;
 
     /**
      * @dev emitted when a member is added
@@ -65,20 +56,10 @@ contract Community is BaseRelayRecipient, Ownable {
     mapping(address => bool) public enabledMembers;
     uint256 public numberOfMembers;
     mapping(string => address) public depositableCurrenciesContracts;
-    mapping(string => address) public depositableACurrenciesContracts;
     string[] public depositableCurrencies;
     CommunityTreasury public communityTreasury;
     GigsRegistry public gigsRegistry;
     ILendingPoolAddressesProvider public lendingPoolAP;
-
-
-    modifier onlyEnabledCurrency(string memory _currency) {
-        require(
-            depositableCurrenciesContracts[_currency] != address(0),
-            "The currency passed as an argument is not enabled, sorry!"
-        );
-        _;
-    }
 
     // Get the forwarder address for the network
     // you are using from
@@ -114,20 +95,19 @@ contract Community is BaseRelayRecipient, Ownable {
 
         depositableCurrenciesContracts["DAI"] = _dai;
         depositableCurrenciesContracts["USDC"] = _usdc;
-        
-        ILendingPool lendingPool = ILendingPool(lendingPoolAP.getLendingPool());
-        depositableACurrenciesContracts["DAI"] = lendingPool.getReserveData(_dai).aTokenAddress;
     }
 
-    function createGigsRegistry() public onlyOwner {
-        require(address(gigsRegistry) == address(0), "gig registry already created");
+    function createGigsRegistry() public onlyOwner returns(address) {
+        require(address(gigsRegistry) == address(0), "already created");
 
         gigsRegistry = new GigsRegistry();
+
+        return address(gigsRegistry);
     }
 
     function setId(uint256 _id) public {
-        require(msg.sender == address(communityTreasury), "only treasury can set id");
-        require(!idSet, "community is already linked");
+        require(msg.sender == address(communityTreasury), "not treasury");
+        require(!idSet, "already set");
 
         id = _id;
         idSet = true;
@@ -136,8 +116,8 @@ contract Community is BaseRelayRecipient, Ownable {
     }
 
     function setTreasury(address _treasury) public onlyOwner {
-        require(!idSet, "community is already linked");
-        require(_treasury != address(0), "Cannot set treasury to 0");
+        require(!idSet, "already set");
+        require(_treasury != address(0), "treasury addr 0");
         
         if (address(communityTreasury) != address(0)) {
             _leave(address(communityTreasury), true);
@@ -152,9 +132,9 @@ contract Community is BaseRelayRecipient, Ownable {
         communityTreasury.setTreasuryDAO(_dao);
     }
     
-    function setCommunity(address _community) public onlyOwner {
+    /*function setCommunity(address _community) public onlyOwner {
         communityTreasury.setCommunity(_community);
-    }
+    }*/
 
     /**
      * @dev makes the calling user join the community if required conditions are met
@@ -165,9 +145,9 @@ contract Community is BaseRelayRecipient, Ownable {
      }
 
     function _join(address _member, uint256 _amountOfDITOToRedeem, bool _isTreasury) internal {
-        require(address(communityTreasury) != address(0), "Community treasury is not set");
-        require(numberOfMembers < 25, "There are already 24 members, sorry!"); //1st member is community treasure so there can actually be 25 members
-        require(enabledMembers[_member] == false, "You already joined!");
+        require(address(communityTreasury) != address(0), "treasury not set");
+        require(numberOfMembers < 25, "community full"); //1st member is community treasure so there can actually be 25 members
+        require(enabledMembers[_member] == false, "already member");
 
         enabledMembers[_member] = true;
         numberOfMembers = numberOfMembers.add(1);
@@ -186,7 +166,7 @@ contract Community is BaseRelayRecipient, Ownable {
     }
 
     function _leave(address _member, bool _isTreasury) private {
-        require(enabledMembers[_member] == true, "You didn't even join!");
+        _onlyMember(_member);
 
         enabledMembers[_member] = false;
         numberOfMembers = numberOfMembers.sub(1);
@@ -214,12 +194,10 @@ contract Community is BaseRelayRecipient, Ownable {
         uint256 _amount,
         string memory _currency,
         bytes memory _optionalSignatureInfo
-    ) public onlyEnabledCurrency(_currency) {
+    ) public {
         address msgSender = _msgSender();
-        require(
-            enabledMembers[msgSender] == true,
-            "You can't deposit if you're not part of the community!"
-        );
+        _onlyMember(_msgSender());
+        _onlyEnabledCurrency(_currency);
 
         address currencyAddress = address(
             depositableCurrenciesContracts[_currency]
@@ -227,7 +205,7 @@ contract Community is BaseRelayRecipient, Ownable {
         IERC20 currency = IERC20(currencyAddress);
         require(
             currency.balanceOf(msgSender) >= _amount.mul(1e18),
-            "You don't have enough funds to invest."
+            "no funds"
         );
 
         bytes32 currencyStringHash = keccak256(bytes(_currency));
@@ -235,7 +213,7 @@ contract Community is BaseRelayRecipient, Ownable {
         if (currencyStringHash == keccak256(bytes("DAI"))) {
             currency.transferFrom(msgSender, address(this), _amount.mul(1e18));
         } else if (currencyStringHash == keccak256(bytes("USDC"))) {
-            UsdcData memory usdcData;
+            DataTypes.UsdcData memory usdcData;
             (
                 usdcData.validAfter,
                 usdcData.validBefore,
@@ -248,9 +226,9 @@ contract Community is BaseRelayRecipient, Ownable {
                 (uint256, uint256, bytes32, uint8, bytes32, bytes32)
             );
 
-            IFiatTokenV2 usdcv2 = IFiatTokenV2(currencyAddress);
+            //IFiatTokenV2 usdcv2 = IFiatTokenV2(currencyAddress);
 
-            usdcv2.transferWithAuthorization(
+            IFiatTokenV2(currencyAddress).transferWithAuthorization(
                 msgSender,
                 address(this),
                 _amount.mul(1e6),
@@ -271,15 +249,13 @@ contract Community is BaseRelayRecipient, Ownable {
      **/
     function invest(uint256 _amount, string memory _currency)
         public
-        onlyEnabledCurrency(_currency)
     {
-        require(
-            enabledMembers[_msgSender()] == true,
-            "You can't invest if you're not part of the community!"
-        );
+        _onlyMember(_msgSender());
+        _onlyEnabledCurrency(_currency);
+
         require(
             keccak256(bytes(_currency)) != keccak256(bytes("USDC")),
-            "Gasless USDC is not implemented in Aave yet"
+            "no gaslss USDC"
         );
 
         address currencyAddress = address(
@@ -290,19 +266,19 @@ contract Community is BaseRelayRecipient, Ownable {
         // Transfer currency
         require(
             currency.balanceOf(address(this)) >= _amount.mul(1e18),
-            "Amount to invest cannot be higher than deposited amount."
+            "no deposit"
         );
 
-        ILendingPool lendingPool = ILendingPool(lendingPoolAP.getLendingPool());
+        //ILendingPool lendingPool = ILendingPool(lendingPoolAP.getLendingPool());
 
-        uint256 amount = SafeMath.mul(10000000,1e18);
-        uint16 referral = 0;
+        //uint256 amount = SafeMath.mul(10000000,1e18);
+        //uint16 referral = 0;
 
         // Approve LendingPool contract to move your DAI
-        currency.approve(address(lendingPool), amount);
+        //currency.approve(address(lendingPool), type(uint256).max);
 
         // Deposit _amount DAI
-        lendingPool.deposit(currencyAddress, _amount.mul(1e18), msg.sender, referral);
+        ILendingPool(lendingPoolAP.getLendingPool()).deposit(currencyAddress, _amount.mul(1e18), msg.sender, 0);
     }
 
     /**
@@ -315,21 +291,36 @@ contract Community is BaseRelayRecipient, Ownable {
         view
         returns (uint256 investedBalance, uint256 investedTokenAPY)
     {
-        address aDaiAddress = address(depositableACurrenciesContracts["DAI"]); // Ropsten aDAI
+        //address aDaiAddress = address(depositableACurrenciesContracts["DAI"]); // Ropsten aDAI
 
-        // Client has to convert to balanceOf / 1e18
-        uint256 _investedBalance = IAToken(aDaiAddress).balanceOf(
-            address(this)
-        );
+        
 
-        address daiAddress = address(depositableCurrenciesContracts["DAI"]);
+        //address daiAddress = address(depositableCurrenciesContracts["DAI"]);
 
         ILendingPool lendingPool = ILendingPool(lendingPoolAP.getLendingPool());
 
-        // Client has to convert to balanceOf / 1e27
-        uint256 daiLiquidityRate= lendingPool.getReserveData(daiAddress).currentLiquidityRate;
+        // Client has to convert to balanceOf / 1e18
+        /*uint256 _investedBalance = IAToken(
+                lendingPool.getReserveData(depositableACurrenciesContracts["DAI"]).aTokenAddress
+            ).balanceOf(
+                address(this)
+        );
 
-        return (_investedBalance, daiLiquidityRate);
+        // Client has to convert to balanceOf / 1e27
+        uint256 daiLiquidityRate= lendingPool.getReserveData(
+            depositableCurrenciesContracts["DAI"]
+        ).currentLiquidityRate;*/
+
+        return (
+            IAToken(
+                lendingPool.getReserveData(depositableCurrenciesContracts["DAI"]).aTokenAddress
+            ).balanceOf(
+                address(this)
+            ), 
+            lendingPool.getReserveData(
+                depositableCurrenciesContracts["DAI"]
+            ).currentLiquidityRate
+        );
     }
 
     /**
@@ -339,23 +330,21 @@ contract Community is BaseRelayRecipient, Ownable {
      **/
     function withdrawFromInvestment(uint256 _amount, string memory _currency)
         public
-        onlyEnabledCurrency(_currency)
     {
-        require(
-            enabledMembers[_msgSender()] == true,
-            "You can't withdraw investment if you're not part of the community!"
-        );
+        _onlyEnabledCurrency(_currency);
+        _onlyMember(_msgSender());
+
         require(
             keccak256(bytes(_currency)) != keccak256(bytes("USDC")),
-            "Gasless USDC is not implemented in Aave yet"
+            "no gasless USDC"
         );
 
         // Retrieve CurrencyAddress
-        address currencyAddress = address(
+        /*address currencyAddress = address(
             depositableCurrenciesContracts[_currency]
-        );
+        );*/
         
-        ILendingPool lendingPool = ILendingPool(lendingPoolAP.getLendingPool());
+        //ILendingPool lendingPool = ILendingPool(lendingPoolAP.getLendingPool());
 
         //TODO: update the check for V2 protocol
         /*if (aCurrency.isTransferAllowed(address(this), _amount.mul(1e18)) == false)
@@ -364,11 +353,15 @@ contract Community is BaseRelayRecipient, Ownable {
             );*/
 
         // Redeems _amount aCurrency
-        lendingPool.withdraw(currencyAddress, _amount.mul(1e18), msg.sender);
+        ILendingPool(lendingPoolAP.getLendingPool()).withdraw(
+            depositableCurrenciesContracts[_currency], 
+            _amount.mul(1e18), 
+            msg.sender
+        );
     }
 
     function completeGig(uint256 _amount, address _project) public {
-        require(_msgSender() == address(gigsRegistry), "Only gig manager can complete gig");
+        require(_msgSender() == address(gigsRegistry), "not gig registry");
 
         if(_project != address(0)) {
             tokens.approve(address(communityTreasury), _amount.mul(1e18));
@@ -384,5 +377,19 @@ contract Community is BaseRelayRecipient, Ownable {
 
     function _msgData() internal view override(Context, BaseRelayRecipient) returns (bytes memory) {
         return BaseRelayRecipient._msgData();
-    } 
+    }
+
+    function _onlyMember(address _member) internal view {
+        require(
+            enabledMembers[_member] == true,
+            "not member"
+        );
+    }
+
+    function _onlyEnabledCurrency(string memory _currency) internal view {
+        require(
+            depositableCurrenciesContracts[_currency] != address(0),
+            "not supported currency"
+        );
+    }
 }

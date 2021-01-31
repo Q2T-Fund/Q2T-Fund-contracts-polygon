@@ -66,4 +66,13 @@ library DataTypes {
     bool isMilestone;
     bytes32 gigHash;
   }
+
+  struct UsdcData {
+        uint256 validAfter;
+        uint256 validBefore;
+        bytes32 nonce;
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
 }

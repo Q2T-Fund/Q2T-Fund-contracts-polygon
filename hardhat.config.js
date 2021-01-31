@@ -1,5 +1,6 @@
 require('dotenv').config();
 require("@nomiclabs/hardhat-waffle");
+require('hardhat-contract-sizer');
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
@@ -30,5 +31,10 @@ module.exports = {
         version: "0.7.4"
       }
     ]
+  },
+  contractSizer: {
+    alphaSort: true,
+    runOnCompile: true,
+    disambiguatePaths: false,
   }
 };

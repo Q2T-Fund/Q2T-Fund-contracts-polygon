@@ -48,6 +48,9 @@ async function main() {
     await community.setTreasury(communityTreasury.address);
     console.log("... and back");
     await communityTreasury.setCommunity(community.address);*/
+    console.log("Setting up gig registry...");
+    const gigsRegistry = await community.createGigsRegistry();
+    console.log("Gig registry address: ", gigsRegistry.address);
     
 
     console.log("Deploying Treasury DAO...");
