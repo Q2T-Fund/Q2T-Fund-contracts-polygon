@@ -13,6 +13,7 @@ let token;
 let communityTreasury;
 let treasuryDAO;
 let community;
+let gigsRegistry;
 
 const forwarder_address = addresses[network].forwarder;
 const dai = addresses[network].dai;
@@ -21,6 +22,9 @@ const stableDebtDai = addresses[network].stableDebtDai;
 const usdc = addresses[network].usdc;
 const stableDebtUsdc = addresses[network].stableDebtUsdc;
 const landingPoolAP = addresses[network].landingPoolAP;
+
+const gigHashIncompl = "0xB3B3886F389F27BC1F2A41F0ADD45A84453F0D2A877FCD1225F13CD95953A86";
+const gigProject = "0x1111111111111111111111111111111111111111";
 
 describe("Deposit and borrow happy flow", function() {
     it("Should deploy community, token and treasury", async function() {
@@ -37,6 +41,12 @@ describe("Deposit and borrow happy flow", function() {
         expect(await communityTreasury.owner()).to.equal(community.address);
         expect(await token.balanceOf(community.address)).to.equal("94000".concat(e18));
         expect(await token.balanceOf(communityTreasury.address)).to.equal("2000".concat(e18));
+    });
+    it("Should deploy gig registry", async function() {
+        await community.createGigsRegistry();
+        gigsRegistry = await ethers.getContractAt("GigsRegistry", community.gigsRegistry());
+
+        expect(await gigsRegistry.community()).to.equal(community.address);
     });
     it("Should deploy and link treasury dao", async function() {
         const TreasuryDAO = await ethers.getContractFactory("TreasuryDao");
@@ -71,14 +81,57 @@ describe("Deposit and borrow happy flow", function() {
 
         expect(await adaiToken.balanceOf(treasuryDAO.address)).to.equal("1000".concat(e18));
     });
+    it("Should create gig (without project)", async function() {
+        const [deployer] = await ethers.getSigners();
+        const gigHash = gigHashIncompl.concat("0");
+
+        await gigsRegistry.createGig(gigHash);
+        const [id, isFound] = await gigsRegistry.gigIdLookup(deployer.address, gigHash);
+        
+        expect(await gigsRegistry.nextId()).to.equal("1");
+        expect(String(id)).to.equal("0");
+        expect(isFound).to.equal(true);
+    });
+    it("Should create milestone and link it to project", async function() {
+        const [deployer] = await ethers.getSigners();
+        const gigHash = gigHashIncompl.concat("1");
+
+        await gigsRegistry.createMilestone(gigHash, gigProject);
+        const [id, isFound] = await gigsRegistry.gigIdLookup(deployer.address, gigHash);
+        
+        expect(await gigsRegistry.nextId()).to.equal("2");
+        expect(String(id)).to.equal("1");
+        expect(isFound).to.equal(true);
+        expect(await gigsRegistry.gigProjects("1")).to.equal(gigProject);
+    });
+    it("Should return false when no gig found by lookup", async function() {
+        const [deployer] = await ethers.getSigners();
+        const gigHash = gigHashIncompl.concat("3");
+        const [id, isFound] = await gigsRegistry.gigIdLookup(deployer.address, gigHash);
+
+        expect(String(id)).to.equal("0");
+        expect(isFound).to.equal(false);
+    });
     it("Should send DITO tokens from community to treasury upon gig completion", async function() {
-        await community.completeGig(1000);
+        const [deployer] = await ethers.getSigners();
+        const gigHash = gigHashIncompl.concat("1");
+        await gigsRegistry.completeGig(1, deployer.address, gigHash, 1000);
 
         expect(await token.balanceOf(communityTreasury.address)).to.equal("3000".concat(e18));
         expect(await token.balanceOf(community.address)).to.equal("93000".concat(e18));
     });
+    it("Should not allow complete already completed gig", async function() {
+        const [deployer] = await ethers.getSigners();
+        const gigHash = gigHashIncompl.concat("1");
+        expect(gigsRegistry.completeGig(1, deployer.address, gigHash, 1000)).to.be.revertedWith("wrong gig status");
+    });
     it("Shoud send tokens back once theshold reached", async function() {
-        await community.completeGig(1000);
+        const [deployer] = await ethers.getSigners();
+        const gigHash = gigHashIncompl.concat("4");
+
+        await gigsRegistry.createMilestone(gigHash, gigProject);
+        const [id, ] = await gigsRegistry.gigIdLookup(deployer.address, gigHash);
+        await gigsRegistry.completeGig(id, deployer.address, gigHash, 1000);
 
         expect(await token.balanceOf(communityTreasury.address)).to.equal("2000".concat(e18));
         expect(await token.balanceOf(community.address)).to.equal("94000".concat(e18));
@@ -89,6 +142,7 @@ describe("Deposit and borrow happy flow", function() {
         const stableDebtUsdcToken = await ethers.getContractAt("ICreditDelegationToken", stableDebtUsdc);
 
         expect(await stableDebtDaiToken.borrowAllowance(treasuryDAO.address, communityTreasury.address)).to.equal(MAX_UINT);
+        expect(await stableDebtUsdcToken.borrowAllowance(treasuryDAO.address, communityTreasury.address)).to.equal(MAX_UINT);
     });
     it("Should receive delegated credit", async function() {
         await communityTreasury.borrowDelegated("USDC","10".concat("000000"));

@@ -22,7 +22,7 @@ contract GigsRegistry is Ownable {
     mapping(uint256 => DataTypes.Gig) public gigs;
     uint256 public nextId;
     //mapping(address => uint256[]) createdGigs;
-    mapping(uint256 => address) gigProjects;
+    mapping(uint256 => address) public gigProjects;
     address public community;
 
     constructor() {
@@ -82,7 +82,8 @@ contract GigsRegistry is Ownable {
 
         while (
             i < nextId &&
-            gigs[i].gigHash != _gigHash
+            (gigs[i].gigHash != _gigHash ||
+            gigs[i].creator != _gigCreator)
         ) {
             i = i + 1;
         }

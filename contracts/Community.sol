@@ -97,12 +97,10 @@ contract Community is BaseRelayRecipient, Ownable {
         depositableCurrenciesContracts["USDC"] = _usdc;
     }
 
-    function createGigsRegistry() public onlyOwner returns(address) {
+    function createGigsRegistry() public onlyOwner {
         require(address(gigsRegistry) == address(0), "already created");
 
         gigsRegistry = new GigsRegistry();
-
-        return address(gigsRegistry);
     }
 
     function setId(uint256 _id) public {
@@ -115,7 +113,7 @@ contract Community is BaseRelayRecipient, Ownable {
         emit IdSet(_id);
     }
 
-    function setTreasury(address _treasury) public onlyOwner {
+    /*function setTreasury(address _treasury) public onlyOwner {
         require(!idSet, "already set");
         require(_treasury != address(0), "treasury addr 0");
         
@@ -126,7 +124,7 @@ contract Community is BaseRelayRecipient, Ownable {
         _join(address(_treasury), 2000, true);
 
         emit TreasurySet(_treasury);
-    }
+    }*/
 
     function setTreasuryDAO(address _dao) public onlyOwner {
         communityTreasury.setTreasuryDAO(_dao);
@@ -184,181 +182,7 @@ contract Community is BaseRelayRecipient, Ownable {
         emit MemberRemoved(_member);
     }
 
-    /**
-     * @dev makes the calling user deposit funds in the community if required conditions are met
-     * @param _amount number of currency which the user wants to deposit
-     * @param _currency currency the user wants to deposit (as of now only DAI and USDC)
-     * @param _optionalSignatureInfo abiEncoded data in order to make USDC2 gasless transactions
-     **/
-    function deposit(
-        uint256 _amount,
-        string memory _currency,
-        bytes memory _optionalSignatureInfo
-    ) public {
-        address msgSender = _msgSender();
-        _onlyMember(_msgSender());
-        _onlyEnabledCurrency(_currency);
 
-        address currencyAddress = address(
-            depositableCurrenciesContracts[_currency]
-        );
-        IERC20 currency = IERC20(currencyAddress);
-        require(
-            currency.balanceOf(msgSender) >= _amount.mul(1e18),
-            "no funds"
-        );
-
-        bytes32 currencyStringHash = keccak256(bytes(_currency));
-
-        if (currencyStringHash == keccak256(bytes("DAI"))) {
-            currency.transferFrom(msgSender, address(this), _amount.mul(1e18));
-        } else if (currencyStringHash == keccak256(bytes("USDC"))) {
-            DataTypes.UsdcData memory usdcData;
-            (
-                usdcData.validAfter,
-                usdcData.validBefore,
-                usdcData.nonce,
-                usdcData.v,
-                usdcData.r,
-                usdcData.s
-            ) = abi.decode(
-                _optionalSignatureInfo,
-                (uint256, uint256, bytes32, uint8, bytes32, bytes32)
-            );
-
-            //IFiatTokenV2 usdcv2 = IFiatTokenV2(currencyAddress);
-
-            IFiatTokenV2(currencyAddress).transferWithAuthorization(
-                msgSender,
-                address(this),
-                _amount.mul(1e6),
-                usdcData.validAfter,
-                usdcData.validBefore,
-                usdcData.nonce,
-                usdcData.v,
-                usdcData.r,
-                usdcData.s
-            );
-        }
-    }
-
-    /**
-     * @dev makes the calling user lend funds that are in the community contract into Aave if required conditions are met
-     * @param _amount number of currency which the user wants to lend
-     * @param _currency currency the user wants to deposit (as of now only DAI)
-     **/
-    function invest(uint256 _amount, string memory _currency)
-        public
-    {
-        _onlyMember(_msgSender());
-        _onlyEnabledCurrency(_currency);
-
-        require(
-            keccak256(bytes(_currency)) != keccak256(bytes("USDC")),
-            "no gaslss USDC"
-        );
-
-        address currencyAddress = address(
-            depositableCurrenciesContracts[_currency]
-        );
-        IERC20 currency = IERC20(currencyAddress);
-
-        // Transfer currency
-        require(
-            currency.balanceOf(address(this)) >= _amount.mul(1e18),
-            "no deposit"
-        );
-
-        //ILendingPool lendingPool = ILendingPool(lendingPoolAP.getLendingPool());
-
-        //uint256 amount = SafeMath.mul(10000000,1e18);
-        //uint16 referral = 0;
-
-        // Approve LendingPool contract to move your DAI
-        //currency.approve(address(lendingPool), type(uint256).max);
-
-        // Deposit _amount DAI
-        ILendingPool(lendingPoolAP.getLendingPool()).deposit(currencyAddress, _amount.mul(1e18), msg.sender, 0);
-    }
-
-    /**
-     * @dev Returns the balance invested by the contract in Aave (invested + interest) and the APY
-     * @return investedBalance the aDai balance of the contract
-     * @return investedTokenAPY the median APY of invested balance
-     **/
-    function getInvestedBalanceInfo()
-        public
-        view
-        returns (uint256 investedBalance, uint256 investedTokenAPY)
-    {
-        //address aDaiAddress = address(depositableACurrenciesContracts["DAI"]); // Ropsten aDAI
-
-        
-
-        //address daiAddress = address(depositableCurrenciesContracts["DAI"]);
-
-        ILendingPool lendingPool = ILendingPool(lendingPoolAP.getLendingPool());
-
-        // Client has to convert to balanceOf / 1e18
-        /*uint256 _investedBalance = IAToken(
-                lendingPool.getReserveData(depositableACurrenciesContracts["DAI"]).aTokenAddress
-            ).balanceOf(
-                address(this)
-        );
-
-        // Client has to convert to balanceOf / 1e27
-        uint256 daiLiquidityRate= lendingPool.getReserveData(
-            depositableCurrenciesContracts["DAI"]
-        ).currentLiquidityRate;*/
-
-        return (
-            IAToken(
-                lendingPool.getReserveData(depositableCurrenciesContracts["DAI"]).aTokenAddress
-            ).balanceOf(
-                address(this)
-            ), 
-            lendingPool.getReserveData(
-                depositableCurrenciesContracts["DAI"]
-            ).currentLiquidityRate
-        );
-    }
-
-    /**
-     * @dev makes the calling user withdraw funds that are in Aave back into the community contract if required conditions are met
-     * @param _amount amount of currency which the user wants to withdraw
-     * @param _currency currency the user wants to deposit (as of now only DAI)
-     **/
-    function withdrawFromInvestment(uint256 _amount, string memory _currency)
-        public
-    {
-        _onlyEnabledCurrency(_currency);
-        _onlyMember(_msgSender());
-
-        require(
-            keccak256(bytes(_currency)) != keccak256(bytes("USDC")),
-            "no gasless USDC"
-        );
-
-        // Retrieve CurrencyAddress
-        /*address currencyAddress = address(
-            depositableCurrenciesContracts[_currency]
-        );*/
-        
-        //ILendingPool lendingPool = ILendingPool(lendingPoolAP.getLendingPool());
-
-        //TODO: update the check for V2 protocol
-        /*if (aCurrency.isTransferAllowed(address(this), _amount.mul(1e18)) == false)
-            revert(
-                "Can't withdraw from investment, probably not enough liquidity on Aave."
-            );*/
-
-        // Redeems _amount aCurrency
-        ILendingPool(lendingPoolAP.getLendingPool()).withdraw(
-            depositableCurrenciesContracts[_currency], 
-            _amount.mul(1e18), 
-            msg.sender
-        );
-    }
 
     function completeGig(uint256 _amount, address _project) public {
         require(_msgSender() == address(gigsRegistry), "not gig registry");
