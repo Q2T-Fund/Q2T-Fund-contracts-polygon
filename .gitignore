@@ -23,7 +23,9 @@ coverage
 
 # production
 build
-artifacts
+!artifacts/
+artifacts/*
+!artifacts/contracts/
 cache
 
 # misc
