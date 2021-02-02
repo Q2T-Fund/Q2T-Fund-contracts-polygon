@@ -23,7 +23,8 @@ contract TreasuryDao is ITreasuryDao, Ownable {
     mapping (address => bool) public isTreasuryActive;
     uint256 public nextId;
     mapping(string => address) public depositableCurrenciesContracts;
-    mapping (address => mapping (address => uint256)) depositorATokens; //address is underlying asset;
+    //mapping (address => mapping (address => uint256)) depositorATokens; //address is underlying asset;
+    mapping (address => mapping (address => uint256)) repayableAmount; //address is underlying asset;
     IProtocolDataProvider public aaveProtocolDataProvider;
     DataTypes.CommunityTemplate public template;
 
@@ -65,7 +66,7 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         emit ThresholdReached(_id);
     }
 
-    function deposit(string memory _currency, uint256 _amount) public override {
+    function deposit(string memory _currency, uint256 _amount, uint256 _repayment) public override {
         require(nextId > 0, "no communy treasury added");
         address currencyAddress = address(
             depositableCurrenciesContracts[_currency]
@@ -85,12 +86,13 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         (address aTokenAddress,,) = aaveProtocolDataProvider.getReserveTokensAddresses(currencyAddress);
         IAToken aToken = IAToken(aTokenAddress);
         
-        uint256 aBalanceBefore = aToken.balanceOf(address(this));
+        //uint256 aBalanceBefore = aToken.balanceOf(address(this));
         currency.transferFrom(msg.sender, address(this), amount);
         currency.approve(address(lendingPool), amount);
         lendingPool.deposit(currencyAddress, amount, address(this), 0);
-        uint256 aBalanceAfter = aToken.balanceOf(address(this));
-        depositorATokens[msg.sender][currencyAddress].add(aBalanceAfter.sub(aBalanceBefore));
+        //uint256 aBalanceAfter = aToken.balanceOf(address(this));
+        //depositorATokens[msg.sender][currencyAddress].add(aBalanceAfter.sub(aBalanceBefore));
+        repayableAmount[msg.sender][currencyAddress].add(amount.mul(_repayment).div(100));
         depositors[msg.sender].add(amount);
         totalDeposited.add(amount);
 
