@@ -65,6 +65,16 @@ async function main() {
     await community.setTreasuryDAO(treasuryDAO.address);
     console.log("... and back");
     await treasuryDAO.linkCommunity(communityTreasury.address);
+
+    console.log("Deploying and activating timelock for community treasury...");
+    
+    const Timelock = await ethers.getContractFactory("WithdrawTimelock");
+    const timelock = await Timelock.deploy(communityTreasury.address);
+    await timelock.deployed;
+
+    console.log("Timelock address: ", timelock.address);
+
+    await community.activateTreasuryTimelock();
 }
   
   main()
