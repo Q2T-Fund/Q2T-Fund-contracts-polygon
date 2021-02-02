@@ -24,7 +24,7 @@ contract TreasuryDao is ITreasuryDao, Ownable {
     uint256 public nextId;
     mapping(string => address) public depositableCurrenciesContracts;
     //mapping (address => mapping (address => uint256)) depositorATokens; //address is underlying asset;
-    mapping (address => mapping (address => uint256)) repayableAmount; //address is underlying asset;
+    mapping (address => mapping (address => uint256)) public repayableAmount; //address is underlying asset;
     IProtocolDataProvider public aaveProtocolDataProvider;
     DataTypes.CommunityTemplate public template;
 
@@ -92,9 +92,9 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         lendingPool.deposit(currencyAddress, amount, address(this), 0);
         //uint256 aBalanceAfter = aToken.balanceOf(address(this));
         //depositorATokens[msg.sender][currencyAddress].add(aBalanceAfter.sub(aBalanceBefore));
-        repayableAmount[msg.sender][currencyAddress].add(amount.mul(_repayment).div(100));
-        depositors[msg.sender].add(amount);
-        totalDeposited.add(amount);
+        repayableAmount[msg.sender][currencyAddress] = repayableAmount[msg.sender][currencyAddress].add(amount.mul(_repayment).div(100));
+        depositors[msg.sender] = depositors[msg.sender].add(amount);
+        totalDeposited = totalDeposited.add(amount);
 
         emit Deposited(msg.sender, _currency, _amount);
     }

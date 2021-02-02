@@ -189,6 +189,9 @@ describe("Self-fund happy flow", function() {
         const TreasuryDAO = await ethers.getContractFactory("TreasuryDao");
         treasuryDAO = await TreasuryDAO.deploy(0, addresses[network].aaveDataProvider, dai, usdc);
         await treasuryDAO.deployed;
+
+        await community.setTreasuryDAO(treasuryDAO.address);
+        await treasuryDAO.linkCommunity(communityTreasury.address);
     });
     it("Should deploy and connect timelock", async function() {
         const Timelock = await ethers.getContractFactory("WithdrawTimelock");
@@ -227,7 +230,6 @@ describe("Self-fund happy flow", function() {
 
         const Erc20 = await ethers.getContractFactory("ERC20", signer);
         const daiToken = Erc20.attach(dai);
-        const adaiToken = Erc20.attach(adai);
 
         const CommunityTreasury = await ethers.getContractFactory("CommunityTreasury", signer);
         const communityTreasuryImp = CommunityTreasury.attach(communityTreasury.address);
@@ -243,5 +245,14 @@ describe("Self-fund happy flow", function() {
         expect(await timelock.withdrawableByLock(process.env.IMPERSONATE, daiToken.address, fundTimelock)).to.equal("10".concat(e18));
         expect(await timelock.canWithdraw(process.env.IMPERSONATE, daiToken.address)).to.equal(0);       
     });
+    it("Should deposit funing into dao", async function() {
+        //treasury already funded so only check dao
+        const adaiToken = await ethers.getContractAt("ERC20",adai);
+
+        expect(await adaiToken.balanceOf(treasuryDAO.address)).to.equal("10".concat(e18));
+        expect(await treasuryDAO.depositors(communityTreasury.address)).to.equal("10".concat(e18));
+        expect(await treasuryDAO.totalDeposited()).to.equal("10".concat(e18));
+        expect(await treasuryDAO.repayableAmount(communityTreasury.address, dai)).to.equal("10".concat(e18));        
+    })
 });
   

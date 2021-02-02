@@ -131,14 +131,24 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     function fund(string memory _currency, uint256 _amount) public override {
         require(timelockActive, "timelock not active");
         
-        address asset = address(depositableCurrenciesContracts[_currency]);
+        address asset = depositableCurrenciesContracts[_currency];
         require(asset != address(0), "currency not supported");
 
         uint256 amount = _amount.mul(1e18);
 
+        require(
+            IERC20(asset).balanceOf(_msgSender()) >= amount,
+            "not enough own funds"
+        );
+
+        IERC20(asset).transferFrom(msg.sender, address(this), amount);
+        IERC20(asset).approve(address(dao), amount);
+
+        dao.deposit(_currency, _amount, 100);
+
         timelock.deposit(msg.sender,asset, amount);
         funds[msg.sender][asset] = funds[msg.sender][asset].add(amount);
-        totalFunded[asset] = totalFunded[asset].add(amount);    
+        totalFunded[asset] = totalFunded[asset].add(amount);   
     }
 
     function withdrawFunding(address _currency, uint256 _amount) public override {
