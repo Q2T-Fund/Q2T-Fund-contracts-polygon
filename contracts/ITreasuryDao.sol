@@ -11,7 +11,7 @@ interface ITreasuryDao {
     function linkCommunity(address _treasuryAddress) external;    
     function thresholdReached(uint256 _id) external;
 
-    function deposit(string memory _currency, uint256 _amount) external;
+    function deposit(string memory _currency, uint256 _amount, uint256 _repayment) external;
     function withdraw(address _currency, uint256 _amount) external;
     function delegate(address _currency, uint256 _amount, address _deligatee) external;
     function undelegate(address _currency, address _deligatee, bool _force) external; //_force to undelegate even if there is outstanding borrowed amt

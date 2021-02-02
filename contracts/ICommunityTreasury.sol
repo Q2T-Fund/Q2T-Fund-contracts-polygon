@@ -24,6 +24,8 @@ interface ICommunityTreasury {
     function getDitoBalance() external view returns (uint256);
     function borrowDelegated(string memory _currency, uint256 _amount) external;
 
-    function deposit(string memory _currency, uint256 _amount) external;
-    function withdraw(address _currency, uint256 _amount) external;
+    function addTimelock() external;
+    function activateTimelock() external;
+    function fund(string memory _currency, uint256 _amount) external;
+    function withdrawFunding(address _currency, uint256 _amount) external;
 }

@@ -77,7 +77,7 @@ describe("Deposit and borrow happy flow", function() {
         const treasuryDaoImp = TreasuryDao.attach(treasuryDAO.address);
 
         await daiToken.approve(treasuryDaoImp.address, "1000".concat(e18));
-        await treasuryDaoImp.deposit("DAI", 1000);
+        await treasuryDaoImp.deposit("DAI", 1000, 30);
 
         expect(await adaiToken.balanceOf(treasuryDAO.address)).to.equal("1000".concat(e18));
     });

@@ -95,6 +95,20 @@
     },
     {
       "inputs": [],
+      "name": "activateTimelock",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "addTimelock",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "approveCommunity",
       "outputs": [],
       "stateMutability": "nonpayable",
@@ -175,7 +189,7 @@
           "type": "uint256"
         }
       ],
-      "name": "deposit",
+      "name": "fund",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -258,7 +272,7 @@
           "type": "uint256"
         }
       ],
-      "name": "withdraw",
+      "name": "withdrawFunding",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

@@ -17,6 +17,7 @@ import "./IDITOToken.sol";
 import "./ICommunityTreasury.sol";
 import "./ITreasuryDao.sol";
 import "./Community.sol";
+import "./WithdrawTimelock.sol";
 
 contract CommunityTreasury is ICommunityTreasury, Ownable {
     using SafeMath for uint256;
@@ -36,6 +37,10 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     uint256 public totalTokensReceived;
     address[] public projects;
     mapping(address => uint256) public projectCredits;
+    WithdrawTimelock public timelock;
+    bool public timelockActive;
+    mapping (address => mapping (address => uint256)) funds;
+    mapping (address => uint256) totalFunded;
 
     constructor(
         DataTypes.CommunityTemplate _template, 
@@ -111,11 +116,32 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
         }
     }
 
-    function deposit(string memory _currency, uint256 _amount) public override {
-        
+    function addTimelock() public override {
+        require(!timelockActive, "already active");
+
+        timelock = WithdrawTimelock(msg.sender);
     }
 
-    function withdraw(address _currency, uint256 _amount) public override {
+    function activateTimelock() public override onlyOwner {
+        require(address(timelock) != address(0), "not set");
+
+        timelockActive = true;
+    }
+    
+    function fund(string memory _currency, uint256 _amount) public override {
+        require(timelockActive, "timelock not active");
+        
+        address asset = address(depositableCurrenciesContracts[_currency]);
+        require(asset != address(0), "currency not supported");
+
+        uint amount = _amount.mul(1e18);
+
+        timelock.deposit(msg.sender,asset, amount);
+        funds[msg.sender][asset].add(amount);
+        totalFunded[asset].add(amount);    
+    }
+
+    function withdrawFunding(address _currency, uint256 _amount) public override {
 
     }
 
