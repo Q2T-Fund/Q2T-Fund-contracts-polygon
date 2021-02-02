@@ -56,12 +56,14 @@ library DataTypes {
   enum GigStatus {
     NONE,
     CREATED,
+    TAKEN,
     COMPLETED,
     CANCELED
   }
 
   struct Gig {
     address creator;
+    address taker;
     GigStatus status;
     bool isMilestone;
     bytes32 gigHash;

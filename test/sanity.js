@@ -112,6 +112,16 @@ describe("Deposit and borrow happy flow", function() {
         expect(String(id)).to.equal("0");
         expect(isFound).to.equal(false);
     });
+    it("Should not allow complete gig that is not taken", async function() {
+        const [deployer] = await ethers.getSigners();
+        const gigHash = gigHashIncompl.concat("1");
+        expect(gigsRegistry.completeGig(1, deployer.address, gigHash, 1000)).to.be.revertedWith("wrong gig status");
+    });
+    it("Should allow to take a gig", async function() {
+        await gigsRegistry.takeGig(1);
+
+        expect((await gigsRegistry.gigs(1))["status"]).to.equal(2);
+    })
     it("Should send DITO tokens from community to treasury upon gig completion", async function() {
         const [deployer] = await ethers.getSigners();
         const gigHash = gigHashIncompl.concat("1");
@@ -131,6 +141,7 @@ describe("Deposit and borrow happy flow", function() {
 
         await gigsRegistry.createMilestone(gigHash, gigProject);
         const [id, ] = await gigsRegistry.gigIdLookup(deployer.address, gigHash);
+        await gigsRegistry.takeGig(id);
         await gigsRegistry.completeGig(id, deployer.address, gigHash, 1000);
 
         expect(await token.balanceOf(communityTreasury.address)).to.equal("2000".concat(e18));

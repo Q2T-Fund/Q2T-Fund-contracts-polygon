@@ -12,11 +12,21 @@ contract GigsRegistry is Ownable {
     using SafeMath for uint256;
 
     event MilestoneCreated(uint256 _id, address _project);
-    event GigCreated(uint256 _id, address _creator, bytes32 _gigIPFSHash);
+    event GigCreated(
+        uint256 _id, 
+        address _creator, 
+        bytes32 _gigHash
+    );
+    event GigTaken(
+        uint256 _id,
+        address _taker,
+        bytes32 _gigHash
+    );
     event GigCompleted(
+        uint256 _id,
         address _creator,
-        address _gigCompleter,
-        bytes32 _gigIPFSHash
+        address _taker,
+        bytes32 _gigHash
     );
 
     mapping(uint256 => DataTypes.Gig) public gigs;
@@ -32,6 +42,7 @@ contract GigsRegistry is Ownable {
     function createGig(bytes32 _gigHash) public {
         DataTypes.Gig memory gig = DataTypes.Gig(
             msg.sender,
+            address(0),
             DataTypes.GigStatus.CREATED,
             false,
             _gigHash
@@ -48,6 +59,7 @@ contract GigsRegistry is Ownable {
 
         DataTypes.Gig memory gig = DataTypes.Gig(
             msg.sender,
+            address(0),
             DataTypes.GigStatus.CREATED,
             true,
             _gigHash
@@ -61,9 +73,19 @@ contract GigsRegistry is Ownable {
         nextId = nextId.add(1);
     }
 
-    function completeGig(uint256 _id, address _gigCreator, bytes32 _gigHash, uint256 _amount) public {
+    function takeGig(uint256 _id) public {
         DataTypes.Gig memory gig = gigs[_id];
         require(gig.status == DataTypes.GigStatus.CREATED, "wrong gig status");
+
+        gigs[_id].taker = msg.sender;
+        gigs[_id].status = DataTypes.GigStatus.TAKEN;
+
+        emit GigTaken(_id, msg.sender, gig.gigHash);
+    }
+
+    function completeGig(uint256 _id, address _gigCreator, bytes32 _gigHash, uint256 _amount) public {
+        DataTypes.Gig memory gig = gigs[_id];
+        require(gig.status == DataTypes.GigStatus.TAKEN, "wrong gig status");
         require(gig.creator == _gigCreator, "wrong creator");
         require(gig.gigHash == _gigHash, "wrong hash");
 
@@ -72,6 +94,8 @@ contract GigsRegistry is Ownable {
         gigs[_id].status = DataTypes.GigStatus.COMPLETED;
         
         Community(community).completeGig(_amount, project);
+
+        emit GigCompleted(_id, _gigCreator, gig.taker, _gigHash);
     }
 
     function gigIdLookup(address _gigCreator, bytes32 _gigHash) public view returns(uint256, bool) {
