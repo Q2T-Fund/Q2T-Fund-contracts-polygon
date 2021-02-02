@@ -6,6 +6,8 @@ import "@chainlink/contracts/src/v0.6/ChainlinkClient.sol";
 contract GigValidator is ChainlinkClient {
   
     bool public isValid;
+    string public isValidString;
+    bool public isFulfilled;
     
     address private oracle;
     bytes32 private jobId;
@@ -14,13 +16,13 @@ contract GigValidator is ChainlinkClient {
     /**
      * Network: Kovan
      * Oracle: 0x2f90A6D021db21e1B2A077c5a37B3C7E75D15b7e
-     * Job ID: 50fc4215f89443d185b061e5d7af9490	
+     * Job ID: 6d914edc36e14d6c880c9c55bda5bc04 (ethbool)	
      * Fee: 0.1 LINK
      */
     constructor() public {
         setPublicChainlinkToken();
         oracle = 0x2f90A6D021db21e1B2A077c5a37B3C7E75D15b7e;
-        jobId = "50fc4215f89443d185b061e5d7af9490";
+        jobId = "6d914edc36e14d6c880c9c55bda5bc04";
         fee = 0.1 * 10 ** 18; // 0.1 LINK
     }
     
@@ -28,15 +30,17 @@ contract GigValidator is ChainlinkClient {
      * Create a Chainlink request to retrieve API response, find the target
      * data, then multiply by 1000000000000000000 (to remove decimal places from data).
      */
-    function requestIsGigValid() public returns (bytes32 requestId) 
+    function requestIsGigValid(string memory _path, string memory _mockIsValid) public returns (bytes32 requestId) 
     {
+        isValid = false;
+        isFulfilled = false;
         Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.fulfill.selector);
         
         // Set the URL to perform the GET request on
         request.add("get", "https://api.distributed.town/api/gig/1/validateHash");
-        request.add("queryParams", "hash=blabla&communityID=1&isMock=true");       
+        request.add("queryParams", string(abi.encodePacked("hash=blabla&communityID=1&isMock=true&returnTrue=", _mockIsValid)));       
 
-        //request.add("path", "RAW.ETH.USD.VOLUME24HOUR");
+        request.add("path", _path);
         
         // Sends the request
         return sendChainlinkRequestTo(oracle, request, fee);
@@ -47,6 +51,8 @@ contract GigValidator is ChainlinkClient {
      */ 
     function fulfill(bytes32 _requestId, bool _isValid) public recordChainlinkFulfillment(_requestId)
     {
+        //isValid = (bytes(_isValid).length == bytes("true").length);
         isValid = _isValid;
+        isFulfilled = true;
     }
 }
