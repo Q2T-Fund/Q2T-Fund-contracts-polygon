@@ -29,6 +29,9 @@ module.exports = {
     compilers: [
       { 
         version: "0.7.4"
+      },
+      { 
+        version: "0.6.10"
       }
     ]
   },
