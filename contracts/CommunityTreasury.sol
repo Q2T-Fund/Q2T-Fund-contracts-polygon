@@ -39,8 +39,8 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     mapping(address => uint256) public projectCredits;
     WithdrawTimelock public timelock;
     bool public timelockActive;
-    mapping (address => mapping (address => uint256)) funds;
-    mapping (address => uint256) totalFunded;
+    mapping (address => mapping (address => uint256)) public funds;
+    mapping (address => uint256) public totalFunded;
 
     constructor(
         DataTypes.CommunityTemplate _template, 
@@ -134,11 +134,11 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
         address asset = address(depositableCurrenciesContracts[_currency]);
         require(asset != address(0), "currency not supported");
 
-        uint amount = _amount.mul(1e18);
+        uint256 amount = _amount.mul(1e18);
 
         timelock.deposit(msg.sender,asset, amount);
-        funds[msg.sender][asset].add(amount);
-        totalFunded[asset].add(amount);    
+        funds[msg.sender][asset] = funds[msg.sender][asset].add(amount);
+        totalFunded[asset] = totalFunded[asset].add(amount);    
     }
 
     function withdrawFunding(address _currency, uint256 _amount) public override {
@@ -160,6 +160,10 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
 
     function getDitoBalance() public override view returns (uint256) {
         return token.balanceOf(address(this));
+    }
+
+    function getFunds(address _funder, address _asset) public view returns (uint256) {
+        return funds[_funder][_asset];
     }
 
     function _resetProjects() internal {

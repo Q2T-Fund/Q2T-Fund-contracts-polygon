@@ -193,6 +193,9 @@ contract Community is BaseRelayRecipient, Ownable {
         }
     }
 
+    function activateTreasuryTimelock() public onlyOwner {
+        communityTreasury.activateTimelock();
+    }
     
 
     function _msgSender() internal view override(Context, BaseRelayRecipient) returns (address payable) {

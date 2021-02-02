@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract WithdrawTimelock {
     using SafeMath for uint256;
-    
+
     uint256 private constant _TIMELOCK = 150 days;
     
     mapping(address => mapping(address => mapping(uint256 => uint256))) public withdrawable; //funder => asset => time => amount
@@ -37,7 +37,7 @@ contract WithdrawTimelock {
             timelocks[_funder].push(lockUntil);
         }
  
-        withdrawable[_funder][_asset][lastDepostiTime] = withdrawable[_funder][_asset][lastDepostiTime].add(_amount);
+        withdrawable[_funder][_asset][lockUntil] = withdrawable[_funder][_asset][lockUntil].add(_amount);
     }
 
     function canWithdraw(address _funder, address _asset) public view returns (uint256) {
@@ -61,5 +61,13 @@ contract WithdrawTimelock {
         }
 
         return withdrawableAmount;
+    }
+
+    function withdrawableByLock(address _funder, address _asset, uint256 _lock) public view returns (uint256) {
+        return withdrawable[_funder][_asset][_lock];
+    }
+
+    function getTimelocksCount(address _funder) public view returns (uint256) {
+        return timelocks[_funder].length;
     }
 }

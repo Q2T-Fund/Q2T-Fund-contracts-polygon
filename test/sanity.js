@@ -14,6 +14,7 @@ let communityTreasury;
 let treasuryDAO;
 let community;
 let gigsRegistry;
+let timelock;
 
 const forwarder_address = addresses[network].forwarder;
 const dai = addresses[network].dai;
@@ -161,6 +162,86 @@ describe("Deposit and borrow happy flow", function() {
         const usdcToken = await ethers.getContractAt("IERC20", usdc);
 
         expect(await usdcToken.balanceOf(communityTreasury.address)).to.equal("10".concat("000000"));
+    });
+});
+
+describe("Self-fund happy flow", function() {
+    before(async function() {
+        //first reset the fore
+        await hre.network.provider.request({
+            method: "hardhat_reset",
+            params: [{
+              forking: {
+                jsonRpcUrl: process.env.ALCHEMY_URL,
+                blockNumber: Number(process.env.ALCHEMY_BLOCK)
+              }
+            }]
+          });
+        
+        const Community = await ethers.getContractFactory("Community");
+        community = await Community.deploy(0, dai, usdc, landingPoolAP, forwarder_address);
+        await community.deployed();
+  
+        const Token = await ethers.getContractFactory("DITOToken");
+        token = Token.attach(await community.tokens());
+        const CommunityTreasury = await ethers.getContractFactory("CommunityTreasury");
+        communityTreasury = CommunityTreasury.attach(await community.communityTreasury());
+        const TreasuryDAO = await ethers.getContractFactory("TreasuryDao");
+        treasuryDAO = await TreasuryDAO.deploy(0, addresses[network].aaveDataProvider, dai, usdc);
+        await treasuryDAO.deployed;
+    });
+    it("Should deploy and connect timelock", async function() {
+        const Timelock = await ethers.getContractFactory("WithdrawTimelock");
+        timelock = await Timelock.deploy(communityTreasury.address);
+        await timelock.deployed;
+
+        await community.activateTreasuryTimelock();
+
+        expect(await communityTreasury.timelock()).to.equal(timelock.address);
+        expect(await communityTreasury.timelockActive()).to.equal(true);
+        expect(await timelock.treasury()).to.equal(communityTreasury.address);
+    });
+    it("Should add member to community", async function() {
+        await hre.network.provider.request({
+            method: "hardhat_impersonateAccount",
+            params: [process.env.IMPERSONATE]
+        });
+
+        signer = await ethers.provider.getSigner(process.env.IMPERSONATE);
+
+        const Community = await ethers.getContractFactory("Community", signer);
+        const communityImp = Community.attach(community.address);
+
+        await communityImp.join(1000);
+
+        expect(await community.numberOfMembers()).to.equal(2);
+        expect(await community.enabledMembers(process.env.IMPERSONATE)).to.equal(true);
+    });
+    it("Should fund the community and create a timelock", async function() {
+        await hre.network.provider.request({
+            method: "hardhat_impersonateAccount",
+            params: [process.env.IMPERSONATE]
+        });
+
+        signer = await ethers.provider.getSigner(process.env.IMPERSONATE);
+
+        const Erc20 = await ethers.getContractFactory("ERC20", signer);
+        const daiToken = Erc20.attach(dai);
+        const adaiToken = Erc20.attach(adai);
+
+        const CommunityTreasury = await ethers.getContractFactory("CommunityTreasury", signer);
+        const communityTreasuryImp = CommunityTreasury.attach(communityTreasury.address);
+
+        await daiToken.approve(communityTreasuryImp.address, "1000".concat(e18));
+
+        await communityTreasuryImp.fund("DAI", 10);
+        const fundTimelock = await timelock.timelocks(process.env.IMPERSONATE, 0);
+
+        expect(await communityTreasury.getFunds(process.env.IMPERSONATE, daiToken.address)).to.equal("10".concat(e18));
+        expect(await communityTreasury.totalFunded(daiToken.address)).to.equal("10".concat(e18));
+        expect(await timelock.getTimelocksCount(process.env.IMPERSONATE)).to.equal(1);
+        expect(await timelock.withdrawableByLock(process.env.IMPERSONATE, daiToken.address, fundTimelock)).to.equal("10".concat(e18));
+        expect(await timelock.canWithdraw(process.env.IMPERSONATE, daiToken.address)).to.equal(0);       
     });
 });
   
