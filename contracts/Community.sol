@@ -97,10 +97,10 @@ contract Community is BaseRelayRecipient, Ownable {
         depositableCurrenciesContracts["USDC"] = _usdc;
     }
 
-    function createGigsRegistry(address _oracle) public onlyOwner {
+    function createGigsRegistry(string memory _communityId, address _oracle) public onlyOwner {
         require(address(gigsRegistry) == address(0), "already created");
 
-        gigsRegistry = new GigsRegistry(_oracle);
+        gigsRegistry = new GigsRegistry(_communityId, _oracle);
     }
 
     function setId(uint256 _id) public {

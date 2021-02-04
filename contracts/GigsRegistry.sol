@@ -32,21 +32,32 @@ contract GigsRegistry is Ownable {
 
     mapping(uint256 => DataTypes.Gig) public gigs;
     uint256 public nextId;
-    //mapping(address => uint256[]) createdGigs;
+    mapping(bytes32 => bool) public hashUsed;
     mapping(uint256 => address) public gigProjects;
     address public community;
+    bytes32 public communityIdHash;
     IGigValidator public oracle;
-    bool private oracleDistabled; //for local tests only
+    bool private oracleDisabled; //for local tests only
 
-    constructor(address _oracle) {
+    constructor(string memory _communityId, address _oracle) {
         require(_oracle != address(0), "oracle is 0");
 
         community = msg.sender;
+        communityIdHash = keccak256(abi.encodePacked(_communityId));
         oracle = IGigValidator(_oracle);
-        oracleDistabled = true; //true for local tests only; false for kovan or mainnet 
+        oracleDisabled = true; //true for local tests only; false for kovan or mainnet 
     }
 
     function createGig(bytes32 _gigHash) public {
+        require(!hashUsed[_gigHash], "hash used");
+        if (!oracleDisabled) {
+            require(oracle.isFulfilled(), "oracle request not fulfilled");
+            require(
+                oracle.isValid() && 
+                (oracle.gigHash() == _gigHash) &&
+                (oracle.communityIdHash() == communityIdHash), 
+                "hash not valid");
+        }
         DataTypes.Gig memory gig = DataTypes.Gig(
             msg.sender,
             address(0),
@@ -55,7 +66,7 @@ contract GigsRegistry is Ownable {
             _gigHash
         );
         gigs[nextId] = gig;
-        //createdGigs[msg.sender].push(nextId);
+        hashUsed[_gigHash] = true;
         emit GigCreated(nextId, msg.sender, _gigHash);
 
         nextId = nextId.add(1);

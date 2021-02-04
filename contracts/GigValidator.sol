@@ -8,6 +8,7 @@ contract GigValidator is ChainlinkClient {
   
     bool public isValid;
     bool public isFulfilled;
+    bytes32 public communityIdHash;
     bytes32 public gigHash;
     
     address private oracle;
@@ -35,6 +36,7 @@ contract GigValidator is ChainlinkClient {
     {
         isValid = false;
         isFulfilled = false;
+        communityIdHash = keccak256(abi.encodePacked(_community));
         gigHash = _hash;
         Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.fulfill.selector);
         

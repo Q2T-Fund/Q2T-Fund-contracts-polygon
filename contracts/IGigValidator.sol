@@ -2,9 +2,10 @@
 pragma solidity ^0.7.4;
 
 interface IGigValidator {  
-    function isValid() external returns (bool);
-    function isFulfilled() external returns (bool);
-    function gigHash() external returns (bytes32);
+    function isValid() external view returns (bool);
+    function isFulfilled() external view returns (bool);
+    function gigHash() external view returns (bytes32);
+    function communityIdHash() external view returns (bytes32);
     
     /**
      * Create a Chainlink request to retrieve API response, find the target
