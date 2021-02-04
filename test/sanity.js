@@ -15,6 +15,7 @@ let treasuryDAO;
 let community;
 let gigsRegistry;
 let timelock;
+let gigValidator;
 
 const forwarder_address = addresses[network].forwarder;
 const dai = addresses[network].dai;
@@ -23,6 +24,7 @@ const stableDebtDai = addresses[network].stableDebtDai;
 const usdc = addresses[network].usdc;
 const stableDebtUsdc = addresses[network].stableDebtUsdc;
 const landingPoolAP = addresses[network].landingPoolAP;
+const chainlink = addresses[network].chainlink;
 
 const gigHashIncompl = "0xB3B3886F389F27BC1F2A41F0ADD45A84453F0D2A877FCD1225F13CD95953A86";
 const gigProject = "0x1111111111111111111111111111111111111111";
@@ -43,8 +45,15 @@ describe("Deposit and borrow happy flow", function() {
         expect(await token.balanceOf(community.address)).to.equal("94000".concat(e18));
         expect(await token.balanceOf(communityTreasury.address)).to.equal("2000".concat(e18));
     });
+    it("Should deploy gig validator (oracle)", async function () {
+        const GigValidator = await ethers.getContractFactory("GigValidator");
+        gigValidator = await GigValidator.deploy(chainlink.address, ethers.utils.toUtf8Bytes(chainlink.jobId));
+        await gigValidator.deployed();
+
+        expect(gigValidator.address).not.to.be.undefined;
+    });
     it("Should deploy gig registry", async function() {
-        await community.createGigsRegistry();
+        await community.createGigsRegistry(gigValidator.address);
         gigsRegistry = await ethers.getContractAt("GigsRegistry", community.gigsRegistry());
 
         expect(await gigsRegistry.community()).to.equal(community.address);
