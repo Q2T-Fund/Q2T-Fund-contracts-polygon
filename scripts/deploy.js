@@ -12,6 +12,7 @@ async function main() {
     const dai = addresses[network].dai;
     const usdc = addresses[network].usdc;
     const landingPoolAP = addresses[network].landingPoolAP;
+    const chainlink = addresses[network].chainlink;
 
     console.log("Deploying to network: ", network);
   
@@ -48,10 +49,15 @@ async function main() {
     await community.setTreasury(communityTreasury.address);
     console.log("... and back");
     await communityTreasury.setCommunity(community.address);*/
+    console.log("Deploying Gig Validator (oracle)...");
+    const GigValidator = await ethers.getContractFactory("GigValidator");
+    const gigValidator = await GigValidator.deploy(chainlink.address, ethers.utils.toUtf8Bytes(chainlink.jobId));
+    await gigValidator.deployTransaction.wait();
+    console.log("Validator address: ", gigValidator.address);
+
     console.log("Setting up gig registry...");
-    await community.createGigsRegistry();
-    console.log("Gig registry address: ", await community.gigsRegistry());
-    
+    await community.createGigsRegistry(gigValidator.address);
+    console.log("Gig registry address: ", await community.gigsRegistry());    
 
     console.log("Deploying Treasury DAO...");
     

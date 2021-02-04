@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./Community.sol";
 import {DataTypes} from './DataTypes.sol';
+import "./IGigValidator.sol";
 
 // WIP
 contract GigsRegistry is Ownable {
@@ -34,9 +35,15 @@ contract GigsRegistry is Ownable {
     //mapping(address => uint256[]) createdGigs;
     mapping(uint256 => address) public gigProjects;
     address public community;
+    IGigValidator public oracle;
+    bool private oracleDistabled; //for local tests only
 
-    constructor() {
+    constructor(address _oracle) {
+        require(_oracle != address(0), "oracle is 0");
+
         community = msg.sender;
+        oracle = IGigValidator(_oracle);
+        oracleDistabled = true; //true for local tests only; false for kovan or mainnet 
     }
 
     function createGig(bytes32 _gigHash) public {
