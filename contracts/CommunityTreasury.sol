@@ -36,7 +36,7 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     uint256 public totalGigsCompleted;
     uint256 public totalTokensReceived;
     address[] public projects;
-    mapping(address => uint256) public projectCredits;
+    mapping(address => uint256[]) public projectContributions;
     WithdrawTimelock public timelock;
     bool public timelockActive;
     mapping (address => mapping (address => uint256)) public funds;
@@ -100,7 +100,7 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
 
         token.transferFrom(_msgSender(), address(this), _amount.mul(1e18));        
         uint256 balance = token.balanceOf(address(this));
-        projectCredits[_project] = projectCredits[_project].add(_amount);
+        projectContributions[_project].push(_amount.mul(1e18));
 
         totalGigsCompleted.add(1);
         totalTokensReceived.add(_amount);
@@ -176,9 +176,21 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
         return funds[_funder][_asset];
     }
 
+    function getProjects(uint256 _id) public view override returns (address) {
+        return projects[_id];
+    }
+
+    function getProjectContributions(address _project) external view override returns (uint256[] memory) {
+        return projectContributions[_project];
+    }
+
+    function projectsNum() public view override returns (uint256) {
+        return projects.length;
+    }
+
     function _resetProjects() internal {
         for (uint256 i; i < projects.length; i++) {
-            delete projectCredits[projects[i]];
+            delete projectContributions[projects[i]];
         }
 
         delete projects;

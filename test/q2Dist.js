@@ -10,17 +10,17 @@ const MAX_UINT = "11579208923731619542357098500868790785326998466564056403945758
 
 let q2Dist;
 
-/*const contributions = [
+const contributions = [
     ["16".concat(e18), "25".concat(e18), "36".concat(e18)],
     ["64".concat(e18)],
     ["49".concat(e18), "25".concat(e18)]
-];*/
+];
 
-const contributions = [
+/*const contributions = [
     ["164".concat(e18), "125".concat(e18), "360".concat(e18)],
     ["764".concat(e18)],
     ["549".concat(e18), "625".concat(e18)]
-];
+];*/
 
 
 let unweighted = [];
@@ -42,7 +42,7 @@ describe("Quadratic Distribution", function() {
         for (let i = 0; i < contributions.length; i++) {
             unweighted.push(String(await q2Dist.calcUnweightedAlloc(contributions[i])));
             console.log(unweighted[i]);
-        }        
+        }
     });
     it("Should Calculate weights", async function() {
         weights = await q2Dist.calcWeights(unweighted);

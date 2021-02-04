@@ -14,7 +14,10 @@ interface ICommunityTreasury {
 
     function dao() external view returns (ITreasuryDao);
     function template() external view returns (DataTypes.CommunityTemplate);
-    function community() external view returns(address);
+    function community() external view returns (address);
+    function getProjects(uint256 _id) external view returns (address);
+    function getProjectContributions(address _project) external view returns (uint256[] memory);
+    function projectsNum() external view returns (uint256);
 
     function setTreasuryDAO(address _dao) external;
     function setCommunity(address _community) external;

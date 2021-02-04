@@ -16,6 +16,8 @@ import "./ILendingPool.sol";
 import "./ITreasuryDao.sol";
 import "./ICommunityTreasury.sol";
 
+import "./QuadraticDistribution.sol";
+
 contract TreasuryDao is ITreasuryDao, Ownable {
     using SafeMath for uint256;
 
@@ -138,5 +140,65 @@ contract TreasuryDao is ITreasuryDao, Ownable {
     function _delegate (address _community, address _currency, uint256 _amount) internal {
         (, address stableDebtTokenAddress,) = aaveProtocolDataProvider.getReserveTokensAddresses(_currency);
         ICreditDelegationToken(stableDebtTokenAddress).approveDelegation(_community, _amount);
+    }
+
+    function _distribute(uint256 _fund) internal {
+        address project;
+        uint256 projectsNum;
+        ICommunityTreasury treasury;
+        uint256[] memory unweigted = new uint256[](nextId);
+        bool[] memory didContribute = new bool[](nextId);
+        uint256 contributedNum = 0;
+        uint256 n;
+
+        //get unweighted allocations
+        for (uint i = 0; i < nextId; i++) {
+            unweigted[i] = 0;
+            didContribute[i] = false;
+            treasury = ICommunityTreasury(communityTeasuries[i]);
+            if (isTreasuryActive[address(treasury)]) {
+                projectsNum = treasury.projectsNum();
+                if (projectsNum > 0) {
+                    for (uint j = 0; j < projectsNum; j++) {
+                        project = treasury.getProjects(j);
+                        unweigted[i] = QuadraticDistribution.calcUnweightedAlloc(treasury.getProjectContributions(project));
+                        contributedNum.add(1);
+                        didContribute[i] = false;
+                    }
+                }
+            }
+        }
+
+        //remove communities that didn't contribute
+        uint256[] memory unweigtedClean;         
+        if (contributedNum == nextId) {
+            unweigtedClean = unweigted;
+        } else {
+            unweigtedClean = new uint256[](contributedNum);
+            n = 0;
+            for (uint i = 0; i < nextId; i++) {
+                if (didContribute[i]) {
+                    unweigtedClean[n] = unweigted[i];
+                    n++;
+                }
+            }
+        }
+
+        //get wights
+        //uint256[] memory weights = new uint256[](unweigtedClean.length);
+        uint256[] memory  weights = QuadraticDistribution.calcWeights(unweigtedClean);
+
+        //get wighted allocations
+        //uint256[] memory weighted; = new uint256[](weights.length);
+        uint256[] memory weighted = QuadraticDistribution.calcWeightedAlloc(_fund, weights);
+
+        //and finally approve delegation
+        n = 0;
+        for (uint i = 0; i < nextId; i++) {
+            if (didContribute[i]) {
+                _delegate(communityTeasuries[i], depositableCurrenciesContracts["USDC"], weighted[n].div(12)); //for usdc
+                n++;
+            }
+        }
     }
 }
