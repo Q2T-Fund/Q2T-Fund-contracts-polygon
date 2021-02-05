@@ -55,9 +55,14 @@ async function main() {
     await gigValidator.deployTransaction.wait();
     console.log("Validator address: ", gigValidator.address);
 
-    console.log("Setting up gig registry...");
-    await community.createGigsRegistry(gigValidator.address);
-    console.log("Gig registry address: ", await community.gigsRegistry());    
+    console.log("Deploying gig registry...");
+    const GigsRegistry = await ethers.getContractFactory("GigsRegistry");
+    const gigsRegistry = await GigsRegistry.deploy(community.address, "community1", gigValidator.address);
+    await gigsRegistry.deployTransaction.wait();
+    console.log("Gig registry address: ", gigsRegistry.address); 
+
+    console.log("Linking Community to gigs registry...");
+    await community.setGigsRegistry(gigsRegistry.address);    
 
     console.log("Deploying Treasury DAO...");
     

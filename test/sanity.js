@@ -52,11 +52,15 @@ describe("Deposit and borrow happy flow", function() {
 
         expect(gigValidator.address).not.to.be.undefined;
     });
-    it("Should deploy gig registry", async function() {
-        await community.createGigsRegistry(gigValidator.address);
-        gigsRegistry = await ethers.getContractAt("GigsRegistry", community.gigsRegistry());
+    it("Should deploy and link gig registry", async function() {
+        const GigsRegistry = await ethers.getContractFactory("GigsRegistry");
+        gigsRegistry = await GigsRegistry.deploy(community.address, "community1", gigValidator.address);
+        await gigsRegistry.deployed();
+
+        await community.setGigsRegistry(gigsRegistry.address);
 
         expect(await gigsRegistry.community()).to.equal(community.address);
+        expect(await community.gigsRegistry()).to.equal(gigsRegistry.address);
     });
     it("Should deploy and link treasury dao", async function() {
         const TreasuryDAO = await ethers.getContractFactory("TreasuryDao");
