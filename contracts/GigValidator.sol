@@ -4,6 +4,8 @@ pragma solidity >=0.6.10 <0.8.0;
 import "@chainlink/contracts/src/v0.6/ChainlinkClient.sol";
 
 contract GigValidator is ChainlinkClient {
+    event requiestFulfilled (bytes32 _requestId, bytes32 _hash, bool _isValid);
+
     string private constant PATH = "isValid";
   
     bool public isValid;
@@ -65,5 +67,7 @@ contract GigValidator is ChainlinkClient {
         //isValid = (bytes(_isValid).length == bytes("true").length);
         isValid = _isValid;
         isFulfilled = true;
+
+        emit requiestFulfilled(_requestId, gigHash, _isValid);
     }
 }
