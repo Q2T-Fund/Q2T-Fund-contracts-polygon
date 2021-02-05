@@ -84,7 +84,6 @@ contract GigsRegistry {
         );
         gigs[nextId] = gig;
         gigProjects[nextId] = _project;
-        //createdGigs[msg.sender].push(nextId);
         emit GigCreated(nextId, msg.sender, _gigHash);
         emit MilestoneCreated(nextId, _project);
 

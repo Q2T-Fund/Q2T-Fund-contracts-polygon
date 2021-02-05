@@ -73,7 +73,7 @@ describe("Deposit and borrow happy flow", function() {
         expect(await communityTreasury.id()).to.equal("0");
         expect(await treasuryDAO.nextId()).to.equal("1");
         expect(await communityTreasury.dao()).to.equal(treasuryDAO.address);
-        expect(await treasuryDAO.communityTeasuries(0)).to.equal(communityTreasury.address);
+        expect(await treasuryDAO.communityTreasuries(0)).to.equal(communityTreasury.address);
     });
     it("Should deposit DAI through treasry dao to aave", async function() {
         await hre.network.provider.request({

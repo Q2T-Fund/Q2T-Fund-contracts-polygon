@@ -97,12 +97,6 @@ contract Community is BaseRelayRecipient, Ownable {
         depositableCurrenciesContracts["USDC"] = _usdc;
     }
 
-    /*function createGigsRegistry(string memory _communityId, address _oracle) public onlyOwner {
-        require(address(gigsRegistry) == address(0), "already created");
-
-        gigsRegistry = new GigsRegistry(_communityId, _oracle);
-    }*/
-
     function setGigsRegistry(address _gigRegistry) public onlyOwner {
         require(address(gigsRegistry) == address(0), "already added");
         require(GigsRegistry(_gigRegistry).community() == address(this), "wrong community");
@@ -120,26 +114,9 @@ contract Community is BaseRelayRecipient, Ownable {
         emit IdSet(_id);
     }
 
-    /*function setTreasury(address _treasury) public onlyOwner {
-        require(!idSet, "already set");
-        require(_treasury != address(0), "treasury addr 0");
-        
-        if (address(communityTreasury) != address(0)) {
-            _leave(address(communityTreasury), true);
-        }
-        communityTreasury = CommunityTreasury(_treasury);
-        _join(address(_treasury), 2000, true);
-
-        emit TreasurySet(_treasury);
-    }*/
-
     function setTreasuryDAO(address _dao) public onlyOwner {
         communityTreasury.setTreasuryDAO(_dao);
     }
-    
-    /*function setCommunity(address _community) public onlyOwner {
-        communityTreasury.setCommunity(_community);
-    }*/
 
     /**
      * @dev makes the calling user join the community if required conditions are met

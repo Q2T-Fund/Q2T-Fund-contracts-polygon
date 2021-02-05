@@ -14,7 +14,6 @@ import "./IAToken.sol";
 import './IProtocolDataProvider.sol';
 import './ICreditDelegationToken.sol';
 import "./ILendingPool.sol";
-//import {ILendingPoolAddressesProvider} from './ILendingPoolAddressesProvider.sol';
 import "./IPriceOracle.sol";
 
 import "./ITreasuryDao.sol";
@@ -29,7 +28,6 @@ contract TreasuryDao is ITreasuryDao, Ownable {
     mapping (address => bool) public isTreasuryActive;
     uint256 public nextId;
     mapping(string => address) public depositableCurrenciesContracts;
-    //mapping (address => mapping (address => uint256)) depositorATokens; //address is underlying asset;
     mapping (address => mapping (address => uint256)) public repayableAmount; //address is underlying asset;
     IProtocolDataProvider public aaveProtocolDataProvider;
     DataTypes.CommunityTemplate public template;
@@ -76,9 +74,6 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         //quadratic distribution delegation to different communities
         _distribute(totalDeligating.mul(1e18));
 
-        //_delegate(msg.sender, depositableCurrenciesContracts["DAI"], type(uint256).max);
-        //_delegate(msg.sender, depositableCurrenciesContracts["USDC"], type(uint256).max);
-
         emit ThresholdReached(_id);
     }
 
@@ -99,15 +94,10 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         );
         
         ILendingPool lendingPool = ILendingPool(aaveProtocolDataProvider.ADDRESSES_PROVIDER().getLendingPool());
-        //(address aTokenAddress,,) = aaveProtocolDataProvider.getReserveTokensAddresses(currencyAddress);
-        //IAToken aToken = IAToken(aTokenAddress);
-        
-        //uint256 aBalanceBefore = aToken.balanceOf(address(this));
+
         currency.transferFrom(msg.sender, address(this), amount);
         currency.approve(address(lendingPool), amount);
         lendingPool.deposit(currencyAddress, amount, address(this), 0);
-        //uint256 aBalanceAfter = aToken.balanceOf(address(this));
-        //depositorATokens[msg.sender][currencyAddress].add(aBalanceAfter.sub(aBalanceBefore));
         repayableAmount[msg.sender][currencyAddress] = repayableAmount[msg.sender][currencyAddress].add(amount.mul(_repayment).div(100));
         depositors[msg.sender] = depositors[msg.sender].add(amount);
         totalDeposited = totalDeposited.add(amount);
@@ -157,7 +147,6 @@ contract TreasuryDao is ITreasuryDao, Ownable {
     }
 
     function _distribute(uint256 _fund) internal {
-        address project;
         uint256 projectsNum;
         ICommunityTreasury treasury;
         uint256[] memory unweigted = new uint256[](nextId);
@@ -174,7 +163,6 @@ contract TreasuryDao is ITreasuryDao, Ownable {
                 projectsNum = treasury.projectsNum();
                 if (projectsNum > 0) {
                     unweigted[n] = QuadraticDistribution.calcUnweightedAlloc(treasury.getAllContributions());
-                    console.log("unweighted", unweigted[n]);
                     n++;
                     contributedNum = contributedNum.add(1);
                     didContribute[i] = true;
@@ -182,47 +170,14 @@ contract TreasuryDao is ITreasuryDao, Ownable {
             }
         }
 
-        console.log("contributedNum", contributedNum);
-
-        //remove communities that didn't contribute
-        /*uint256[] memory unweigtedClean;         
-        if (contributedNum == nextId) {
-            unweigtedClean = unweigted;
-        } else {
-            unweigtedClean = new uint256[](contributedNum);
-            n = 0;
-            for (uint i = 0; i < nextId; i++) {
-                if (didContribute[i]) {
-                    unweigtedClean[n] = unweigted[i];
-                    n++;
-                }
-            }
-        }*/
-
-        //get weights
-        //uint256[] memory weights = new uint256[](contributedNum);
-        //uint256 allocSum = QuadraticDistribution.sumUnweighted(unweigted, contributedNum);
         uint256[] memory weights = QuadraticDistribution.calcWeights(unweigted, contributedNum);
 
-        /* for (uint256 i = 0; i < contributedNum; i++) {
-            weights[i] = unweigted[i].div(allocSum);
-        } */
-
-        console.log("weights[0]", weights[0]);
-        console.log("weights[1]", weights[1]);
-        console.log("weights[2]", weights[2]);
-
-        //get wighted allocations
-        //uint256[] memory weighted = new uint256[](weights.length);
         uint256[] memory weighted = QuadraticDistribution.calcWeightedAlloc(_fund, weights);
 
         //and finally approve delegation
-        console.log("fund", _fund);
         n = 0;
         for (uint i = 0; i < nextId; i++) {
             if (didContribute[i]) {
-                console.log("treasury", communityTreasuries[i]);
-                console.log("alloc", weighted[n]);
                 _delegate(communityTreasuries[i], depositableCurrenciesContracts["USDC"], weighted[n].div(1e12)); //for usdc
                 //TODO: call treasury reset
                 n++;

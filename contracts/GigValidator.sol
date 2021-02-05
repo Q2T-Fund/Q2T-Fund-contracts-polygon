@@ -29,8 +29,7 @@ contract GigValidator is ChainlinkClient {
     }
 
     /**
-     * Create a Chainlink request to retrieve API response, find the target
-     * data, then multiply by 1000000000000000000 (to remove decimal places from data).
+     * Create a Chainlink request to retrieve API response if created gig is valid
      */
     function requestIsGigValid(string memory _community, bytes32 _hash, string memory _mockIsValid) public returns (bytes32 requestId) 
     {
