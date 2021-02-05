@@ -45,7 +45,7 @@ describe("Quadratic Distribution", function() {
         }
     });
     it("Should Calculate weights", async function() {
-        weights = await q2Dist.calcWeights(unweighted);
+        weights = await q2Dist.calcWeights(unweighted, unweighted.length);
 
         for (let i = 0; i < weights.length; i++) {
             console.log(String(weights[i]));
@@ -55,7 +55,7 @@ describe("Quadratic Distribution", function() {
         weighted = await q2Dist.calcWeightedAlloc(totalFunds, weights);
 
         for (let i = 0; i < weighted.length; i++) {
-            console.log(String(weighted[i]).slice(0, -14));
+            console.log(String(weighted[i]).slice(0, -18));
         }
         
         console.log(totalFunds.slice(0, -18));

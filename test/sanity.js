@@ -163,10 +163,10 @@ describe("Deposit and borrow happy flow", function() {
     });
     it("Shoud trigger credit delegation once DITO theshold reached", async function() {
         //Threshold was reached in previos test. This one just checks the delegation
-        const stableDebtDaiToken = await ethers.getContractAt("ICreditDelegationToken", stableDebtDai);
+        //const stableDebtDaiToken = await ethers.getContractAt("ICreditDelegationToken", stableDebtDai);
         const stableDebtUsdcToken = await ethers.getContractAt("ICreditDelegationToken", stableDebtUsdc);
 
-        expect(await stableDebtDaiToken.borrowAllowance(treasuryDAO.address, communityTreasury.address)).to.equal(MAX_UINT);
+        //expect(await stableDebtDaiToken.borrowAllowance(treasuryDAO.address, communityTreasury.address)).to.equal(MAX_UINT);
         expect(await stableDebtUsdcToken.borrowAllowance(treasuryDAO.address, communityTreasury.address)).to.equal(MAX_UINT);
     });
     it("Should receive delegated credit", async function() {

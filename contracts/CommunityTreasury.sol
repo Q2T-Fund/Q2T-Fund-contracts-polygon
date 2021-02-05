@@ -101,9 +101,9 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
         token.transferFrom(_msgSender(), address(this), _amount.mul(1e18));        
         uint256 balance = token.balanceOf(address(this));
         projectContributions[_project].push(_amount.mul(1e18));
-
-        totalGigsCompleted.add(1);
-        totalTokensReceived.add(_amount);
+        
+        totalGigsCompleted = totalGigsCompleted.add(1);
+        totalTokensReceived = totalTokensReceived.add(_amount);
         if (balance >= THRESHOLD.mul(1e18)) {
             uint256 sendback = balance.sub(MINAMOUNT.mul(1e18));
 
@@ -180,8 +180,22 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
         return projects[_id];
     }
 
-    function getProjectContributions(address _project) external view override returns (uint256[] memory) {
+    function getProjectContributions(address _project) public view override returns (uint256[] memory) {
         return projectContributions[_project];
+    }
+
+    function getAllContributions() public view override returns (uint256[] memory) {
+        uint256[] memory totalCreditsReceived = new uint256[](totalGigsCompleted);
+        uint256 n = 0;
+
+        for (uint i; i < projects.length; i++) {
+            for (uint j; j < projectContributions[projects[i]].length; j++) {
+                totalCreditsReceived[n] = projectContributions[projects[i]][j];
+                n++;
+            }
+        }
+
+        return totalCreditsReceived;
     }
 
     function projectsNum() public view override returns (uint256) {
@@ -194,5 +208,6 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
         }
 
         delete projects;
+        totalGigsCompleted = 0;
     }
 }

@@ -17,6 +17,7 @@ interface ICommunityTreasury {
     function community() external view returns (address);
     function getProjects(uint256 _id) external view returns (address);
     function getProjectContributions(address _project) external view returns (uint256[] memory);
+    function getAllContributions() external view returns (uint256[] memory);
     function projectsNum() external view returns (uint256);
 
     function setTreasuryDAO(address _dao) external;

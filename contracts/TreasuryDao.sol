@@ -160,28 +160,26 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         uint256[] memory unweigted = new uint256[](nextId);
         bool[] memory didContribute = new bool[](nextId);
         uint256 contributedNum = 0;
-        uint256 n;
+        uint256 n = 0;
 
         //get unweighted allocations
         for (uint i = 0; i < nextId; i++) {
-            unweigted[i] = 0;
             didContribute[i] = false;
             treasury = ICommunityTreasury(communityTeasuries[i]);
             if (isTreasuryActive[address(treasury)]) {
+                //check if community has contributed projects
                 projectsNum = treasury.projectsNum();
                 if (projectsNum > 0) {
-                    for (uint j = 0; j < projectsNum; j++) {
-                        project = treasury.getProjects(j);
-                        unweigted[i] = QuadraticDistribution.calcUnweightedAlloc(treasury.getProjectContributions(project));
-                        contributedNum.add(1);
-                        didContribute[i] = false;
-                    }
+                    unweigted[n] = QuadraticDistribution.calcUnweightedAlloc(treasury.getAllContributions());
+                    n++;
+                    contributedNum.add(1);
+                    didContribute[i] = true;
                 }
             }
         }
 
         //remove communities that didn't contribute
-        uint256[] memory unweigtedClean;         
+        /*uint256[] memory unweigtedClean;         
         if (contributedNum == nextId) {
             unweigtedClean = unweigted;
         } else {
@@ -193,11 +191,11 @@ contract TreasuryDao is ITreasuryDao, Ownable {
                     n++;
                 }
             }
-        }
+        }*/
 
         //get wights
         //uint256[] memory weights = new uint256[](unweigtedClean.length);
-        uint256[] memory  weights = QuadraticDistribution.calcWeights(unweigtedClean);
+        uint256[] memory  weights = QuadraticDistribution.calcWeights(unweigted, contributedNum);
 
         //get wighted allocations
         //uint256[] memory weighted; = new uint256[](weights.length);
