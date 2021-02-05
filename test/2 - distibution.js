@@ -53,6 +53,13 @@ const gigsProjects = [
     ]
 ];
 
+const expectedAllocs = [
+    "17264980512",
+    "10620495444",
+    "0",
+    "32525403222"
+];
+
 const communitiesNumber = 4;
 
 let communities = [];
@@ -149,9 +156,28 @@ describe("Gig completion and quadratic distribution", function() {
 
                     await gigsRegistries[i].completeGig(id, deployer.address, gigHash, gigs[i][j]);
 
-                    console.log(communityTreasuries[i].address, String(await communityTreasuries[i].getDitoBalance()));
+                    //console.log(communityTreasuries[i].address, String(await communityTreasuries[i].getDitoBalance()));
                 }
             }
+        }
+    });
+    it("Should allow treasuries to borrow now", async function() {
+        const stableDebtUsdcToken = await ethers.getContractAt("ICreditDelegationToken", stableDebtUsdc);
+        const usdcToken = await ethers.getContractAt("IERC20", usdc);
+
+        for (let i = 0; i < communitiesNumber; i++) {
+            expect(await stableDebtUsdcToken.borrowAllowance(
+                treasuryDAO.address, communityTreasuries[i].address)
+                ).to.equal(expectedAllocs[i]);
+
+            if (expectedAllocs[i] != "0" ) {
+                await communityTreasuries[i].borrowDelegated("USDC",expectedAllocs[i])
+            };
+            
+            expect(await usdcToken.balanceOf(communityTreasuries[i].address)).to.equal(expectedAllocs[i]);
+            expect(await stableDebtUsdcToken.borrowAllowance(
+                treasuryDAO.address, communityTreasuries[i].address)
+                ).to.equal("0");
         }
     });
 });
