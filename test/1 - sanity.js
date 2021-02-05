@@ -180,7 +180,7 @@ describe("Deposit and borrow happy flow", function() {
 
 describe("Self-fund happy flow", function() {
     before(async function() {
-        //first reset the fore
+        //first reset the fork
         await hre.network.provider.request({
             method: "hardhat_reset",
             params: [{
@@ -190,7 +190,8 @@ describe("Self-fund happy flow", function() {
               }
             }]
           });
-        
+
+        //deploy stuff        
         const Community = await ethers.getContractFactory("Community");
         community = await Community.deploy(0, dai, usdc, landingPoolAP, forwarder_address);
         await community.deployed();
@@ -268,4 +269,3 @@ describe("Self-fund happy flow", function() {
         expect(await treasuryDAO.repayableAmount(communityTreasury.address, dai)).to.equal("10".concat(e18));        
     })
 });
-  

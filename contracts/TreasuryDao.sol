@@ -25,7 +25,7 @@ import "./QuadraticDistribution.sol";
 contract TreasuryDao is ITreasuryDao, Ownable {
     using SafeMath for uint256;
 
-    mapping (uint256 => address) public communityTeasuries;
+    mapping (uint256 => address) public communityTreasuries;
     mapping (address => bool) public isTreasuryActive;
     uint256 public nextId;
     mapping(string => address) public depositableCurrenciesContracts;
@@ -52,7 +52,7 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         require(communityTreasury.template() == template, "template mismatch");
         require(address(communityTreasury.dao()) == address(this), "dao mismatch");
 
-        communityTeasuries[nextId] = _treasuryAddress;
+        communityTreasuries[nextId] = _treasuryAddress;
         isTreasuryActive[_treasuryAddress] = true;
         communityTreasury.setId(nextId);
 
@@ -62,7 +62,7 @@ contract TreasuryDao is ITreasuryDao, Ownable {
     }
 
     function thresholdReached(uint256 _id) public override {
-        require(msg.sender == communityTeasuries[_id], "wrong id");
+        require(msg.sender == communityTreasuries[_id], "wrong id");
         require(isTreasuryActive[msg.sender], "treasury is not active");
 
         IPriceOracle priceOracle = IPriceOracle(aaveProtocolDataProvider.ADDRESSES_PROVIDER().getPriceOracle());
@@ -168,13 +168,13 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         //get unweighted allocations
         for (uint i = 0; i < nextId; i++) {
             didContribute[i] = false;
-            treasury = ICommunityTreasury(communityTeasuries[i]);
+            treasury = ICommunityTreasury(communityTreasuries[i]);
             if (isTreasuryActive[address(treasury)]) {
                 //check if community has contributed projects
                 projectsNum = treasury.projectsNum();
-                console.log("projectsNum", projectsNum);
                 if (projectsNum > 0) {
                     unweigted[n] = QuadraticDistribution.calcUnweightedAlloc(treasury.getAllContributions());
+                    console.log("unweighted", unweigted[n]);
                     n++;
                     contributedNum = contributedNum.add(1);
                     didContribute[i] = true;
@@ -208,8 +208,9 @@ contract TreasuryDao is ITreasuryDao, Ownable {
             weights[i] = unweigted[i].div(allocSum);
         } */
 
-        console.log("weights len", weights.length);
         console.log("weights[0]", weights[0]);
+        console.log("weights[1]", weights[1]);
+        console.log("weights[2]", weights[2]);
 
         //get wighted allocations
         //uint256[] memory weighted = new uint256[](weights.length);
@@ -220,9 +221,9 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         n = 0;
         for (uint i = 0; i < nextId; i++) {
             if (didContribute[i]) {
-                console.log("treasury", communityTeasuries[i]);
+                console.log("treasury", communityTreasuries[i]);
                 console.log("alloc", weighted[n]);
-                _delegate(communityTeasuries[i], depositableCurrenciesContracts["USDC"], weighted[n].div(1e12)); //for usdc
+                _delegate(communityTreasuries[i], depositableCurrenciesContracts["USDC"], weighted[n].div(1e12)); //for usdc
                 //TODO: call treasury reset
                 n++;
             }
