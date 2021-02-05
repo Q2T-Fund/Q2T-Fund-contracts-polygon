@@ -10,11 +10,15 @@ const MAX_UINT = "11579208923731619542357098500868790785326998466564056403945758
 
 let q2Dist;
 
-const contributions = [
+/*const contributions = [
     ["16".concat(e18), "25".concat(e18), "36".concat(e18)],
     ["64".concat(e18)],
     ["49".concat(e18), "25".concat(e18)]
-];
+];*/
+
+const contributions = [
+    ["4000".concat(e18)]
+]
 
 /*const contributions = [
     ["164".concat(e18), "125".concat(e18), "360".concat(e18)],
@@ -27,7 +31,7 @@ let unweighted = [];
 let weights = [];
 let weighted = [];
 
-const totalFunds = "10000000".concat(e18);
+const totalFunds = "604".concat(e18);
 
 describe("Quadratic Distribution", function() {
     it("Should deploy quadratic distribution lib", async function() {

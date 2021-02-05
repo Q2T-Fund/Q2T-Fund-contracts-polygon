@@ -167,14 +167,14 @@ describe("Deposit and borrow happy flow", function() {
         const stableDebtUsdcToken = await ethers.getContractAt("ICreditDelegationToken", stableDebtUsdc);
 
         //expect(await stableDebtDaiToken.borrowAllowance(treasuryDAO.address, communityTreasury.address)).to.equal(MAX_UINT);
-        expect(await stableDebtUsdcToken.borrowAllowance(treasuryDAO.address, communityTreasury.address)).to.equal(MAX_UINT);
+        expect(await stableDebtUsdcToken.borrowAllowance(treasuryDAO.address, communityTreasury.address)).to.equal("604".concat("000000"));
     });
     it("Should receive delegated credit", async function() {
-        await communityTreasury.borrowDelegated("USDC","10".concat("000000"));
+        await communityTreasury.borrowDelegated("USDC","604".concat("000000"));
 
         const usdcToken = await ethers.getContractAt("IERC20", usdc);
 
-        expect(await usdcToken.balanceOf(communityTreasury.address)).to.equal("10".concat("000000"));
+        expect(await usdcToken.balanceOf(communityTreasury.address)).to.equal("604".concat("000000"));
     });
 });
 

@@ -17,15 +17,21 @@ library QuadraticDistribution {
         return unweightedAlloc.mul(unweightedAlloc);
     }
 
-    function calcWeights(uint256[] memory _unweightedAllocs, uint256 _contributiors) internal pure returns (uint256[] memory) {
+    function sumUnweighted(uint256[] memory _unweightedAllocs, uint256 _contributiors) internal pure returns (uint256) {
         uint256 allocSum = 0;
-        uint256[] memory weights = new uint256[](_contributiors);
 
         for (uint256 i = 0; i < _contributiors; i++) {
             allocSum = allocSum.add(_unweightedAllocs[i]);
         }
 
         allocSum = allocSum.div(1000000); //extra zeroes after 100 represent digits after do in percentages
+
+        return allocSum;
+    }
+
+    function calcWeights(uint256[] memory _unweightedAllocs, uint256 _contributiors) internal pure returns (uint256[] memory) {
+        uint256 allocSum = sumUnweighted(_unweightedAllocs, _contributiors);
+        uint256[] memory weights = new uint256[](_contributiors);
 
         for (uint256 i = 0; i < _contributiors; i++) {
             weights[i] = _unweightedAllocs[i].div(allocSum);

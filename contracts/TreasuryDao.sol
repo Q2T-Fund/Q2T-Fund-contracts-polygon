@@ -1,5 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.7.4;
+pragma experimental ABIEncoderV2;
+
+import "hardhat/console.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -67,11 +70,11 @@ contract TreasuryDao is ITreasuryDao, Ownable {
 
         //delegation is for usdc for now
         (,,uint256 borrowingPower,,,) = lendingPool.getUserAccountData(address(this));
-        uint256 totalDeligated = borrowingPower.div(priceOracle.getAssetPrice(depositableCurrenciesContracts["USDC"]));
-        totalDeligated = totalDeligated.mul(80).div(100); //lower borrowing a bit to avoid liquidations
+        uint256 totalDeligating = borrowingPower.div(priceOracle.getAssetPrice(depositableCurrenciesContracts["USDC"]));
+        totalDeligating = totalDeligating.mul(80).div(100); //lower borrowing a bit to avoid liquidations
 
         //quadratic distribution delegation to different communities
-        _distribute(totalDeligated);
+        _distribute(totalDeligating.mul(1e18));
 
         //_delegate(msg.sender, depositableCurrenciesContracts["DAI"], type(uint256).max);
         //_delegate(msg.sender, depositableCurrenciesContracts["USDC"], type(uint256).max);
@@ -169,14 +172,17 @@ contract TreasuryDao is ITreasuryDao, Ownable {
             if (isTreasuryActive[address(treasury)]) {
                 //check if community has contributed projects
                 projectsNum = treasury.projectsNum();
+                console.log("projectsNum", projectsNum);
                 if (projectsNum > 0) {
                     unweigted[n] = QuadraticDistribution.calcUnweightedAlloc(treasury.getAllContributions());
                     n++;
-                    contributedNum.add(1);
+                    contributedNum = contributedNum.add(1);
                     didContribute[i] = true;
                 }
             }
         }
+
+        console.log("contributedNum", contributedNum);
 
         //remove communities that didn't contribute
         /*uint256[] memory unweigtedClean;         
@@ -193,19 +199,30 @@ contract TreasuryDao is ITreasuryDao, Ownable {
             }
         }*/
 
-        //get wights
-        //uint256[] memory weights = new uint256[](unweigtedClean.length);
-        uint256[] memory  weights = QuadraticDistribution.calcWeights(unweigted, contributedNum);
+        //get weights
+        //uint256[] memory weights = new uint256[](contributedNum);
+        //uint256 allocSum = QuadraticDistribution.sumUnweighted(unweigted, contributedNum);
+        uint256[] memory weights = QuadraticDistribution.calcWeights(unweigted, contributedNum);
+
+        /* for (uint256 i = 0; i < contributedNum; i++) {
+            weights[i] = unweigted[i].div(allocSum);
+        } */
+
+        console.log("weights len", weights.length);
+        console.log("weights[0]", weights[0]);
 
         //get wighted allocations
-        //uint256[] memory weighted; = new uint256[](weights.length);
+        //uint256[] memory weighted = new uint256[](weights.length);
         uint256[] memory weighted = QuadraticDistribution.calcWeightedAlloc(_fund, weights);
 
         //and finally approve delegation
+        console.log("fund", _fund);
         n = 0;
         for (uint i = 0; i < nextId; i++) {
             if (didContribute[i]) {
-                _delegate(communityTeasuries[i], depositableCurrenciesContracts["USDC"], weighted[n].div(12)); //for usdc
+                console.log("treasury", communityTeasuries[i]);
+                console.log("alloc", weighted[n]);
+                _delegate(communityTeasuries[i], depositableCurrenciesContracts["USDC"], weighted[n].div(1e12)); //for usdc
                 //TODO: call treasury reset
                 n++;
             }

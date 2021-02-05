@@ -97,9 +97,13 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     function completeMilestone(uint256 _amount, address _project) public override {
         require(_msgSender() == community, "Gig can only be completed by community");
         require(_project != address(0), "no project for milestone");
+        require(_amount > 0, "amount is 0");
 
         token.transferFrom(_msgSender(), address(this), _amount.mul(1e18));        
         uint256 balance = token.balanceOf(address(this));
+        if (projectContributions[_project].length == 0) {
+            projects.push(_project);
+        }
         projectContributions[_project].push(_amount.mul(1e18));
         
         totalGigsCompleted = totalGigsCompleted.add(1);
