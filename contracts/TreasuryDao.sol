@@ -12,6 +12,7 @@ import './IProtocolDataProvider.sol';
 import './ICreditDelegationToken.sol';
 import "./ILendingPool.sol";
 //import {ILendingPoolAddressesProvider} from './ILendingPoolAddressesProvider.sol';
+import "./IPriceOracle.sol";
 
 import "./ITreasuryDao.sol";
 import "./ICommunityTreasury.sol";
@@ -61,9 +62,19 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         require(msg.sender == communityTeasuries[_id], "wrong id");
         require(isTreasuryActive[msg.sender], "treasury is not active");
 
-        //should be quadratic distribution first and delegation to different communities
-        _delegate(msg.sender, depositableCurrenciesContracts["DAI"], type(uint256).max);
-        _delegate(msg.sender, depositableCurrenciesContracts["USDC"], type(uint256).max);
+        IPriceOracle priceOracle = IPriceOracle(aaveProtocolDataProvider.ADDRESSES_PROVIDER().getPriceOracle());
+        ILendingPool lendingPool = ILendingPool(aaveProtocolDataProvider.ADDRESSES_PROVIDER().getLendingPool());
+
+        //delegation is for usdc for now
+        (,,uint256 borrowingPower,,,) = lendingPool.getUserAccountData(address(this));
+        uint256 totalDeligated = borrowingPower.div(priceOracle.getAssetPrice(depositableCurrenciesContracts["USDC"]));
+        totalDeligated = totalDeligated.mul(80).div(100); //lower borrowing a bit to avoid liquidations
+
+        //quadratic distribution delegation to different communities
+        _distribute(totalDeligated);
+
+        //_delegate(msg.sender, depositableCurrenciesContracts["DAI"], type(uint256).max);
+        //_delegate(msg.sender, depositableCurrenciesContracts["USDC"], type(uint256).max);
 
         emit ThresholdReached(_id);
     }
@@ -85,8 +96,8 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         );
         
         ILendingPool lendingPool = ILendingPool(aaveProtocolDataProvider.ADDRESSES_PROVIDER().getLendingPool());
-        (address aTokenAddress,,) = aaveProtocolDataProvider.getReserveTokensAddresses(currencyAddress);
-        IAToken aToken = IAToken(aTokenAddress);
+        //(address aTokenAddress,,) = aaveProtocolDataProvider.getReserveTokensAddresses(currencyAddress);
+        //IAToken aToken = IAToken(aTokenAddress);
         
         //uint256 aBalanceBefore = aToken.balanceOf(address(this));
         currency.transferFrom(msg.sender, address(this), amount);
@@ -197,6 +208,7 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         for (uint i = 0; i < nextId; i++) {
             if (didContribute[i]) {
                 _delegate(communityTeasuries[i], depositableCurrenciesContracts["USDC"], weighted[n].div(12)); //for usdc
+                //TODO: call treasury reset
                 n++;
             }
         }
