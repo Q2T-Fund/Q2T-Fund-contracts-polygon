@@ -105,6 +105,30 @@ async function main() {
   console.log("Timelock address: ", timelock.address);
 
   await community.activateTreasuryTimelock();
+
+  if (network == "kovan") {
+    console.log("Verifying contracts with etherscan...");
+    
+    await hre.run("verify:verify", {
+      address: community.address,
+      constructorArguments: [template, dai, usdc, landingPoolAP, forwarder_address,],
+    });
+
+    await hre.run("verify:verify", {
+      address: communityTreasury.address,
+      constructorArguments: [template, token.address, deployer.address, dai, usdc, landingPoolAP,],
+    });
+
+    await hre.run("verify:verify", {
+      address: token.address,
+      constructorArguments: ["96000000000000000000000",],
+    });
+
+    await hre.run("verify:verify", {
+      address: gigsRegistry.address,
+      constructorArguments: [community.address, "community1", gigValidatorAddress,],
+    });
+  }
 }
   
 main()
