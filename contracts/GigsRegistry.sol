@@ -45,7 +45,12 @@ contract GigsRegistry {
         community = _community;
         communityIdHash = keccak256(abi.encodePacked(_communityId));
         oracle = IGigValidator(_oracle);
-        oracleDisabled = true; //true for local tests only; false for kovan or mainnet 
+        oracleDisabled = false; //true for local tests only; false for kovan or mainnet 
+    }
+
+    //for testing purposes to be removed
+    function setCommunityId(string memory _communityId) public {
+        communityIdHash = keccak256(abi.encodePacked(_communityId));
     }
 
     function createGig(bytes32 _gigHash) public {

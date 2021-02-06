@@ -1,5 +1,6 @@
 require('dotenv').config();
 require("@nomiclabs/hardhat-waffle");
+require("@nomiclabs/hardhat-etherscan");
 require('hardhat-contract-sizer');
 
 /**
@@ -18,7 +19,8 @@ module.exports = {
       chainId: 42,
       url: process.env.PROVIDER_URL_KOVAN,
       accounts: [process.env.PRIVATE_KEY],
-      gas: 9500000
+      gas: 9500000,
+      pasPrice: 20000000000
     },
     mainnet: {
       url: process.env.PROVIDER_URL_MAIN,
@@ -39,5 +41,8 @@ module.exports = {
     alphaSort: true,
     runOnCompile: true,
     disambiguatePaths: false,
+  },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API
   }
 };

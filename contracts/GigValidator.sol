@@ -33,6 +33,7 @@ contract GigValidator is ChainlinkClient {
     /**
      * Create a Chainlink request to retrieve API response if created gig is valid
      */
+     //!!! REMOVE MOCK ONCE REAL API IS AVAILABLE
     function requestIsGigValid(string memory _community, bytes32 _hash, string memory _mockIsValid) public returns (bytes32 requestId) 
     {
         isValid = false;
