@@ -44,6 +44,7 @@ contract Community is BaseRelayRecipient, Ownable {
     event MemberRemoved(address _member);
     event IdSet(uint256 _id);
     event TreasurySet(address _treasury);
+    event GigRegistrySet(address _registry);
 
     uint256 public constant INIT_TOKENS = 96000;
     
@@ -102,6 +103,8 @@ contract Community is BaseRelayRecipient, Ownable {
         require(GigsRegistry(_gigRegistry).community() == address(this), "wrong community");
 
         gigsRegistry = GigsRegistry(_gigRegistry);
+
+        emit GigRegistrySet(_gigRegistry);
     }
 
     function setId(uint256 _id) public {

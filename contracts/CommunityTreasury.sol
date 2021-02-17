@@ -152,7 +152,9 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
 
         timelock.deposit(msg.sender,asset, amount);
         funds[msg.sender][asset] = funds[msg.sender][asset].add(amount);
-        totalFunded[asset] = totalFunded[asset].add(amount);   
+        totalFunded[asset] = totalFunded[asset].add(amount);
+
+        emit Funded(msg.sender, asset, amount); 
     }
 
     function withdrawFunding(address _currency, uint256 _amount) public override {

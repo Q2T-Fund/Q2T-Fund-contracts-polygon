@@ -11,6 +11,7 @@ interface ICommunityTreasury {
     event MilesoteComplete(uint256 _amount, address _project);
     event ThersholdReached(uint256 _amount);
     event Borrowed(string _currency, uint256 _amount);
+    event Funded(address _funder, address _currency, uint256 _amount);
 
     function dao() external view returns (ITreasuryDao);
     function template() external view returns (DataTypes.CommunityTemplate);

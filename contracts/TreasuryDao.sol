@@ -142,6 +142,8 @@ contract TreasuryDao is ITreasuryDao, Ownable {
     function _delegate (address _community, address _currency, uint256 _amount) internal {
         (, address stableDebtTokenAddress,) = aaveProtocolDataProvider.getReserveTokensAddresses(_currency);
         ICreditDelegationToken(stableDebtTokenAddress).approveDelegation(_community, _amount);
+
+        emit Delegated(_community, _currency, _amount);
     }
 
     function _distribute(uint256 _fund) internal {

@@ -7,6 +7,7 @@ interface ITreasuryDao {
     event CommunityLinked(address _treasuryAddress, address _communityAddress, uint256 _id);
     event ThresholdReached(uint256 _id);
     event Deposited(address _depositor, string _currency, uint256 _amount);
+    event Delegated(address _community, address _currency, uint256 _amount);
 
     function linkCommunity(address _treasuryAddress) external;    
     function thresholdReached(uint256 _id) external;
