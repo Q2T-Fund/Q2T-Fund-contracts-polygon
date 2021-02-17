@@ -28,6 +28,8 @@ import "./DITOToken.sol";
 contract Community is BaseRelayRecipient, Ownable {
     string public override versionRecipient = "2.0.0";
 
+    bytes4 public constant IDENTITY = 0x8f5d825f;
+
     using SafeMath for uint256;
     //using WadRayMath for uint256;
 

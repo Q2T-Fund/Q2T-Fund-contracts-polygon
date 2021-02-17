@@ -22,6 +22,8 @@ import "./WithdrawTimelock.sol";
 contract CommunityTreasury is ICommunityTreasury, Ownable {
     using SafeMath for uint256;
 
+    bytes4 public constant IDENTITY = 0xf114c7dc;
+
     uint256 public constant THRESHOLD = 3840;
     uint256 public constant MINAMOUNT = 2000;
 

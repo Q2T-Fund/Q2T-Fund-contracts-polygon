@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 contract WithdrawTimelock {
     using SafeMath for uint256;
 
+    bytes4 public constant IDENTITY = 0x8bdc0342;
+
     uint256 private constant _TIMELOCK = 150 days;
     
     mapping(address => mapping(address => mapping(uint256 => uint256))) public withdrawable; //funder => asset => time => amount

@@ -22,6 +22,8 @@ import "./QuadraticDistribution.sol";
 contract TreasuryDao is ITreasuryDao, Ownable {
     using SafeMath for uint256;
 
+    bytes4 public constant IDENTITY = 0x7eb0b43d;
+
     mapping (uint256 => address) public communityTreasuries;
     mapping (address => bool) public isTreasuryActive;
     uint256 public nextId;

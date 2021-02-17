@@ -12,6 +12,8 @@ import "./IGigValidator.sol";
 contract GigsRegistry {
     using SafeMath for uint256;
 
+    bytes4 public constant IDENTITY = 0x95fe5fc1;
+
     event MilestoneCreated(uint256 _id, address _project);
     event GigCreated(
         uint256 _id, 
