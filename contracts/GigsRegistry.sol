@@ -15,6 +15,8 @@ contract GigsRegistry {
     bytes4 public constant IDENTITY = 0x95fe5fc1;
 
     event MilestoneCreated(uint256 _id, address _project);
+    event GigValidationRequested(address _creator, bytes32 _gigHash);
+    event errorConfirmingGig(bytes32 _gigHash, string _reason);
     event GigCreated(
         uint256 _id, 
         address _creator, 
@@ -32,6 +34,8 @@ contract GigsRegistry {
         bytes32 _gigHash
     );
 
+    address private newGigCreator;
+    bool public validationRequested;
     mapping(uint256 => DataTypes.Gig) public gigs;
     uint256 public nextId;
     mapping(bytes32 => bool) public hashUsed;
@@ -51,32 +55,56 @@ contract GigsRegistry {
     }
 
     //for testing purposes to be removed
+    function enableOracle(bool _oracleEnabled) public {
+        oracleDisabled = !_oracleEnabled;
+    }
+
     function setCommunityId(string memory _communityId) public {
         communityIdHash = keccak256(abi.encodePacked(_communityId));
     }
 
-    function createGig(bytes32 _gigHash) public {
+    function createGig(bytes32 _gigHash, string memory _communityId) public {
         require(!hashUsed[_gigHash], "hash used");
+        require(!validationRequested, "validation in progress");
+        newGigCreator = msg.sender;
+        validationRequested = true;
+
         if (!oracleDisabled) {
-            require(oracle.isFulfilled(), "oracle request not fulfilled");
-            require(
-                oracle.isValid() && 
-                (oracle.gigHash() == _gigHash) &&
-                (oracle.communityIdHash() == communityIdHash), 
-                "hash not valid");
+            require(!oracle.isRequested(), "validation in progress");
+            oracle.requestIsGigValid(_communityId, _gigHash, "true");
+        }
+
+        emit GigValidationRequested(msg.sender, _gigHash);
+    }
+
+    function confirmGig(bytes32 _gigHash) public returns (bool) {
+        if (!oracleDisabled || (msg.sender != address(oracle))) {
+            emit errorConfirmingGig(_gigHash, "Not oracle");
+
+            return false;
+        }
+        if(!validationRequested) {
+            emit errorConfirmingGig(_gigHash, "Validation not Requested");
+
+            return false;
         }
         DataTypes.Gig memory gig = DataTypes.Gig(
-            msg.sender,
+            newGigCreator,
             address(0),
             DataTypes.GigStatus.CREATED,
             false,
             _gigHash
         );
+
         gigs[nextId] = gig;
         hashUsed[_gigHash] = true;
+        nextId = nextId.add(1);
+        newGigCreator = address(0);
+        validationRequested = false;
+
         emit GigCreated(nextId, msg.sender, _gigHash);
 
-        nextId = nextId.add(1);
+        return true;
     }
 
     function createMilestone(bytes32 _gigHash, address _project) public {

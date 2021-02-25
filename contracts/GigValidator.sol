@@ -2,16 +2,22 @@
 pragma solidity >=0.6.10 <0.8.0;
 
 import "@chainlink/contracts/src/v0.6/ChainlinkClient.sol";
+import "./IGigsRegistry.sol";
 
 contract GigValidator is ChainlinkClient {
-    event requiestFulfilled (bytes32 _requestId, bytes32 _hash, bool _isValid);
+    event requiestFulfilled (bytes32 _requestId, bytes32 _hash, bool _isValid, bool _isConfirmed);
+
+    bytes4 public constant IDENTITY = 0xbf444387;
 
     string private constant PATH = "isValid";
   
     bool public isValid;
     bool public isFulfilled;
+    bool public isRequested;
+    bool public isConfirmed;
     bytes32 public communityIdHash;
     bytes32 public gigHash;
+    address public gigsRegistry;
     
     address private oracle;
     bytes32 private jobId;
@@ -36,8 +42,14 @@ contract GigValidator is ChainlinkClient {
      //!!! REMOVE MOCK ONCE REAL API IS AVAILABLE
     function requestIsGigValid(string memory _community, bytes32 _hash, string memory _mockIsValid) public returns (bytes32 requestId) 
     {
+        require(IGigsRegistry(msg.sender).IDENTITY() == bytes4(0x95fe5fc1), "not registry");
+        require(!isRequested, "already requested");
+        gigsRegistry = msg.sender;
+        
         isValid = false;
         isFulfilled = false;
+        isRequested = true;
+        isConfirmed = false;
         communityIdHash = keccak256(abi.encodePacked(_community));
         gigHash = _hash;
         Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.fulfill.selector);
@@ -65,10 +77,26 @@ contract GigValidator is ChainlinkClient {
      */ 
     function fulfill(bytes32 _requestId, bool _isValid) public recordChainlinkFulfillment(_requestId)
     {
-        //isValid = (bytes(_isValid).length == bytes("true").length);
+        if(_isValid && (gigsRegistry != address(0))) {
+            isConfirmed = IGigsRegistry(gigsRegistry).confirmGig(gigHash);
+        }
+
         isValid = _isValid;
         isFulfilled = true;
+        isRequested = false;
+        gigsRegistry = address(0);
 
-        emit requiestFulfilled(_requestId, gigHash, _isValid);
+        emit requiestFulfilled(_requestId, gigHash, _isValid, isConfirmed);
+    }
+
+    function reset() public {
+        require(isRequested, "not requested");
+        require(msg.sender == gigsRegistry, "not requestor");
+
+        isValid = false;
+        isFulfilled = false;
+        isRequested = false;
+        isConfirmed = false;
+        gigsRegistry = address(0);
     }
 }
