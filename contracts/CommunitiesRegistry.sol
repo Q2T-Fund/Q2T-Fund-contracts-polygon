@@ -13,30 +13,50 @@ import "./DataTypes.sol";
  */
 contract CommunitiesRegistry {
     event CommunityCreated(address _newCommunityAddress, DataTypes.CommunityTemplate _template);
+    event DaoSet(DataTypes.CommunityTemplate _template, address _dao);
 
     bytes4 public constant IDENTITY = 0x94635046;
 
-    mapping (DataTypes.CommunityTemplate => address) daos;
+    mapping (DataTypes.CommunityTemplate => address) public daos;
     mapping (DataTypes.CommunityTemplate => address[]) public communities;
 
-    address dai;
-    address usdc;
-    address lendingPoolAP;
-    address forwarder;
-    address gigValidator;
+    address public dai;
+    address public usdc;
+    address public lendingPoolAP;
+    address public forwarder;
+    address public gigValidator;
+
+    address private tokenFactory;
+    address private treasuryFactory;
 
     constructor(
         address _dai,
         address _usdc,
         address _gigValidator,
+        address _tokenFactory,
+        address _treasuryFactory,
         address _lendingPoolAP,
         address _forwarder
     ) {
         dai = _dai;
         usdc = _usdc;
+        tokenFactory = _tokenFactory;
+        treasuryFactory = _treasuryFactory;
         lendingPoolAP = _lendingPoolAP;
         gigValidator = _gigValidator;
         forwarder = _lendingPoolAP;
+    }
+
+    function setDao(DataTypes.CommunityTemplate _template, address _dao, bool _override) public {
+        if (_override) {
+            require(communities[_template].length == 0, "has communities");
+        } else {
+            require(daos[_template] == address(0), "already set");
+        }
+
+        daos[_template] = _dao;
+
+        emit DaoSet(_template, _dao);     
     }
 
     /**
@@ -51,6 +71,8 @@ contract CommunitiesRegistry {
             _template,
             dai,
             usdc,
+            tokenFactory,
+            treasuryFactory,
             lendingPoolAP,
             forwarder
         );
@@ -61,6 +83,8 @@ contract CommunitiesRegistry {
 
         newCommunity.setTreasuryDAO(dao);
         ITreasuryDao(dao).linkCommunity(address(newCommunity.communityTreasury()));
+
+        newCommunity.transferOwnership(msg.sender);
         
         emit CommunityCreated(newCommunityAddress, _template);
 
