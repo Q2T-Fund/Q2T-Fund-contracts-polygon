@@ -28,4 +28,8 @@ contract AddressesProvider {
         currenciesAddresses["DAI"] = _dai;
         currenciesAddresses["USDC"] = _usdc;
     }
+
+    function getCurrencyAddress(string memory _currency) public view returns (address) {
+        return currenciesAddresses[_currency];
+    }
 }

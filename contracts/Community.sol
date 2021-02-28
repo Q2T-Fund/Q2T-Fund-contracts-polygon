@@ -19,6 +19,7 @@ import {DataTypes} from './DataTypes.sol';
 import "./DITOToken.sol";
 import "./DITOTokenFactory.sol";
 import "./CommunityTreasuryFactory.sol";
+import "./AddressesProvider.sol";
 //import "./WadRayMath.sol";
 
 /**
@@ -55,16 +56,18 @@ contract Community is BaseRelayRecipient, Ownable {
     // The address of the DITOToken ERC20 contract
     address public tokens;
 
+    AddressesProvider public addressesProvider; 
+
     uint256 public id;
     bool idSet;
     DataTypes.CommunityTemplate public template;
     mapping(address => bool) public enabledMembers;
     uint256 public numberOfMembers;
-    mapping(string => address) public depositableCurrenciesContracts;
-    string[] public depositableCurrencies;
+    //mapping(string => address) public depositableCurrenciesContracts;
+    mapping (string => bool) public depositableCurrencies;
     address public communityTreasury;
     GigsRegistry public gigsRegistry;
-    ILendingPoolAddressesProvider public lendingPoolAP;
+    //ILendingPoolAddressesProvider public lendingPoolAP;
 
     // Get the forwarder address for the network
     // you are using from
@@ -72,36 +75,28 @@ contract Community is BaseRelayRecipient, Ownable {
     // 0x25CEd1955423BA34332Ec1B60154967750a0297D is ropsten's one
     constructor(
         DataTypes.CommunityTemplate _template, 
-        address _dai,
-        address _usdc,
-        address _tokenFactory,
-        address _treasuryFactory,
-        address _lendingPoolAP, 
+        address _addressesProvider,
         address _forwarder
     ) {
         idSet = false;
         template = _template;
+        addressesProvider = AddressesProvider(_addressesProvider);
         trustedForwarder = _forwarder;
-        lendingPoolAP = ILendingPoolAddressesProvider(_lendingPoolAP);
+        //lendingPoolAP = ILendingPoolAddressesProvider(_lendingPoolAP);
 
-        tokens = DITOTokenFactory(_tokenFactory).deployToken(INIT_TOKENS.mul(1e18));
-        communityTreasury = CommunityTreasuryFactory(_treasuryFactory).deployTreasury(
+        tokens = DITOTokenFactory(addressesProvider.ditoTokenFactory()).deployToken(INIT_TOKENS.mul(1e18));
+        communityTreasury = CommunityTreasuryFactory(addressesProvider.communityTreasuryFactory()).deployTreasury(
             template, 
             tokens,
             msg.sender,
-            _dai,
-            _usdc,
-            _lendingPoolAP
+            address(addressesProvider)
         );
 
         _join(communityTreasury, 2000, true);
         CommunityTreasury(communityTreasury).approveCommunity();
 
-        depositableCurrencies.push("DAI");
-        depositableCurrencies.push("USDC");
-
-        depositableCurrenciesContracts["DAI"] = _dai;
-        depositableCurrenciesContracts["USDC"] = _usdc;
+        depositableCurrencies["DAI"] = true;
+        depositableCurrencies["USDC"] = true;
     }
 
     function setGigsRegistry(address _gigRegistry) public onlyOwner {
@@ -208,7 +203,7 @@ contract Community is BaseRelayRecipient, Ownable {
 
     function _onlyEnabledCurrency(string memory _currency) internal view {
         require(
-            depositableCurrenciesContracts[_currency] != address(0),
+            depositableCurrencies[_currency],
             "not supported currency"
         );
     }

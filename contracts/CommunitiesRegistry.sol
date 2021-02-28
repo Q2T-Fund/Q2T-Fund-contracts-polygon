@@ -4,6 +4,7 @@ pragma solidity ^0.7.4;
 import "./Community.sol";
 import "./ITreasuryDao.sol";
 import "./DataTypes.sol";
+//import "./AddressesProvider.sol";
 
 /**
  * @title DistributedTown CommunitiesRegistry
@@ -20,31 +21,23 @@ contract CommunitiesRegistry {
     mapping (DataTypes.CommunityTemplate => address) public daos;
     mapping (DataTypes.CommunityTemplate => address[]) public communities;
 
-    address public dai;
-    address public usdc;
-    address public lendingPoolAP;
-    address public forwarder;
-    address public gigValidator;
+    address public addressesProvider;
 
-    address private tokenFactory;
-    address private treasuryFactory;
+    //address public dai;
+    //address public usdc;
+    //address public lendingPoolAP;
+    address public forwarder;
+    //address public gigValidator;
+
+    //address private tokenFactory;
+    //address private treasuryFactory;
 
     constructor(
-        address _dai,
-        address _usdc,
-        address _gigValidator,
-        address _tokenFactory,
-        address _treasuryFactory,
-        address _lendingPoolAP,
+        address _addressesProvider,
         address _forwarder
     ) {
-        dai = _dai;
-        usdc = _usdc;
-        tokenFactory = _tokenFactory;
-        treasuryFactory = _treasuryFactory;
-        lendingPoolAP = _lendingPoolAP;
-        gigValidator = _gigValidator;
-        forwarder = _lendingPoolAP;
+        addressesProvider = _addressesProvider;
+        forwarder = _forwarder;
     }
 
     function setDao(DataTypes.CommunityTemplate _template, address _dao, bool _override) public {
@@ -69,11 +62,7 @@ contract CommunitiesRegistry {
 
         Community newCommunity = new Community(
             _template,
-            dai,
-            usdc,
-            tokenFactory,
-            treasuryFactory,
-            lendingPoolAP,
+            addressesProvider,
             forwarder
         );
 
