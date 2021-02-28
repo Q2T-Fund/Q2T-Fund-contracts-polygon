@@ -87,7 +87,7 @@ contract Community is BaseRelayRecipient, Ownable {
         tokens = DITOTokenFactory(_tokenFactory).deployToken(INIT_TOKENS.mul(1e18));
         communityTreasury = CommunityTreasuryFactory(_treasuryFactory).deployTreasury(
             template, 
-            address(tokens),
+            tokens,
             msg.sender,
             _dai,
             _usdc,
