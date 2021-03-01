@@ -45,14 +45,15 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     mapping (address => uint256) public totalFunded;
 
     constructor(
-        DataTypes.CommunityTemplate _template, 
+        DataTypes.CommunityTemplate _template,
+        address _community, 
         address _token,
         address _dao, 
         address _dai, 
         address _usdc, 
         address _lendingPoolAP
     ) {
-        community = _msgSender();
+        community = _community;
         idSet = false;
         template = _template;
         token = IDITOToken(_token);

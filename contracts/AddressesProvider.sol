@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.7.4;
 
+import "./CommunitiesRegistry.sol";
+
 contract AddressesProvider {
     address public communitiesRegistry;
     address public communityTreasuryFactory;
@@ -13,13 +15,12 @@ contract AddressesProvider {
     constructor(
         address _dai,
         address _usdc,
-        address _communitiesRegistry,
         address _communityTreasuryFactory,
         address _ditoTokenFactory,
         address _oracle,
-        address _lendingPoolAP
+        address _lendingPoolAP,
+        address _forwarder
     ) {
-        communitiesRegistry = _communitiesRegistry;
         communityTreasuryFactory = _communityTreasuryFactory;
         ditoTokenFactory = _ditoTokenFactory;
         oracle = _oracle;
@@ -27,9 +28,12 @@ contract AddressesProvider {
 
         currenciesAddresses["DAI"] = _dai;
         currenciesAddresses["USDC"] = _usdc;
-    }
 
-    function getCurrencyAddress(string memory _currency) public view returns (address) {
-        return currenciesAddresses[_currency];
+        CommunitiesRegistry communitiesRegistryContract = new CommunitiesRegistry(
+            address(this),
+            _forwarder
+        );
+
+        communitiesRegistry = address(communitiesRegistryContract);
     }
 }

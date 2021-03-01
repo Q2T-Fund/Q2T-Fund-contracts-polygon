@@ -5,7 +5,7 @@ import "./DITOToken.sol";
 
 contract DITOTokenFactory {
     function deployToken(uint256 _initTokens) public returns (address) {
-        DITOToken newToken = new DITOToken(_initTokens);
+        DITOToken newToken = new DITOToken(_initTokens, msg.sender);
         newToken.transferOwnership(msg.sender);
 
         return address(newToken);

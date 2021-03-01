@@ -13,7 +13,8 @@ contract CommunityTreasuryFactory {
         address _addressesProvider
     ) public returns (address) {
         CommunityTreasury communityTreasury = new CommunityTreasury(
-            _template, 
+            _template,
+            msg.sender, 
             _token,
             _dao,
             AddressesProvider(_addressesProvider).currenciesAddresses("DAI"),

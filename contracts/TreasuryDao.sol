@@ -24,6 +24,7 @@ contract TreasuryDao is ITreasuryDao, Ownable {
 
     bytes4 public constant IDENTITY = 0x7eb0b43d;
 
+    address public communitiesRegistry;
     mapping (uint256 => address) public communityTreasuries;
     mapping (address => bool) public isTreasuryActive;
     uint256 public nextId;
@@ -35,16 +36,25 @@ contract TreasuryDao is ITreasuryDao, Ownable {
     mapping (address => uint256) public depositors;
     uint256 public totalDeposited;
 
-    constructor(DataTypes.CommunityTemplate _template, address _aaveDataProvider, address _dai, address _usdc) {
+    constructor(
+        DataTypes.CommunityTemplate _template, 
+        address _communitiesRegistry, 
+        address _aaveDataProvider, 
+        address _dai, 
+        address _usdc
+    ) {
         require(_aaveDataProvider != address(0), "Aave data provider cannot be 0");
 
         depositableCurrenciesContracts["DAI"] = _dai;
         depositableCurrenciesContracts["USDC"] = _usdc;
         template = _template;
+        communitiesRegistry = _communitiesRegistry;
         aaveProtocolDataProvider = IProtocolDataProvider(_aaveDataProvider);
     }
 
-    function linkCommunity(address _treasuryAddress) public override onlyOwner {
+    function linkCommunity(address _treasuryAddress) public override {
+        require(owner() == _msgSender() || _msgSender() == communitiesRegistry, "not owner or registry");
+
         ICommunityTreasury communityTreasury = ICommunityTreasury(_treasuryAddress);
 
         require(communityTreasury.template() == template, "template mismatch");
