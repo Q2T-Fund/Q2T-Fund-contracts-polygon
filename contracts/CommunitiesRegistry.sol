@@ -113,4 +113,8 @@ contract CommunitiesRegistry {
 
         return address(templateCommunities[i - 1]);
     }
+
+    function getCommunitiesNumber(DataTypes.CommunityTemplate _template) public view returns (uint256) {
+        return communities[_template].length;
+    }
 }
