@@ -42,7 +42,7 @@ async function main() {
   let daoAddresses = [];
 
   for (let i = 0; i < 3; i++) {
-    daoAddresses.push(await deployTreasuryDao(i, communitiesRegistry.address));
+    daoAddresses.push(await deployTreasuryDao(i, addressesProviderAddress));
 
     console.log("Adding dao to registry");
     await communitiesRegistry.setDao(i, daoAddresses[i], false);
@@ -176,12 +176,12 @@ async function deployAddressesProvider(oracle, ditoTokenFactory, communityTreasu
   return addressesProvider.address;
 }
 
-async function deployTreasuryDao(template, communitiesReg) {
+async function deployTreasuryDao(template, ap) {
   const [deployer] = await ethers.getSigners();
 
   console.log("Deploying Treasury DAO with template ", template);
   const TreasuryDAO = await ethers.getContractFactory("TreasuryDao");
-  const treasuryDAO = await TreasuryDAO.deploy(template, communitiesReg, addresses[network].aaveDataProvider, dai, usdc);
+  const treasuryDAO = await TreasuryDAO.deploy(template, ap, addresses[network].aaveDataProvider);
 
   console.log("Treasury DAO address:", treasuryDAO.address);
 

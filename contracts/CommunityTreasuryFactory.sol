@@ -17,9 +17,7 @@ contract CommunityTreasuryFactory {
             msg.sender, 
             _token,
             _dao,
-            AddressesProvider(_addressesProvider).currenciesAddresses("DAI"),
-            AddressesProvider(_addressesProvider).currenciesAddresses("USDC"),
-            AddressesProvider(_addressesProvider).lendingPoolAP()
+            _addressesProvider
         );
         communityTreasury.transferOwnership(msg.sender);
 

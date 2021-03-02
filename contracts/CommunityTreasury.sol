@@ -18,6 +18,7 @@ import "./ICommunityTreasury.sol";
 import "./ITreasuryDao.sol";
 import "./Community.sol";
 import "./WithdrawTimelock.sol";
+import "./AddressesProvider.sol";
 
 contract CommunityTreasury is ICommunityTreasury, Ownable {
     using SafeMath for uint256;
@@ -27,8 +28,7 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     uint256 public constant THRESHOLD = 3840;
     uint256 public constant MINAMOUNT = 2000;
 
-    ILendingPoolAddressesProvider public lendingPoolAP;
-    mapping(string => address) public depositableCurrenciesContracts;
+    address public addressesProvider;
     uint256 public id;
     bool idSet;
     DataTypes.CommunityTemplate public override template;
@@ -48,21 +48,15 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
         DataTypes.CommunityTemplate _template,
         address _community, 
         address _token,
-        address _dao, 
-        address _dai, 
-        address _usdc, 
-        address _lendingPoolAP
+        address _dao,
+        address _addressesProvider 
     ) {
         community = _community;
         idSet = false;
         template = _template;
+        addressesProvider = _addressesProvider;
         token = IDITOToken(_token);
         dao = ITreasuryDao(_dao);
-        lendingPoolAP = ILendingPoolAddressesProvider(_lendingPoolAP);
-
-        depositableCurrenciesContracts["DAI"] = _dai;
-
-        depositableCurrenciesContracts["USDC"] = _usdc;
     }
     
     function setId(uint256 _id) public override {
@@ -138,7 +132,7 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     function fund(string memory _currency, uint256 _amount) public override {
         require(timelockActive, "timelock not active");
         
-        address asset = depositableCurrenciesContracts[_currency];
+        address asset = AddressesProvider(addressesProvider).currenciesAddresses(_currency);
         require(asset != address(0), "currency not supported");
 
         uint256 amount = _amount.mul(1e18);
@@ -165,8 +159,10 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     }
 
     function borrowDelegated(string memory _currency, uint256 _amount) public override {
-        ILendingPool lendingPool = ILendingPool(lendingPoolAP.getLendingPool());
-        address asset = address(depositableCurrenciesContracts[_currency]);
+        ILendingPool lendingPool = ILendingPool(
+            ILendingPoolAddressesProvider(
+                AddressesProvider(addressesProvider).lendingPoolAP()).getLendingPool());
+        address asset = AddressesProvider(addressesProvider).currenciesAddresses(_currency);
 
         require(asset != address(0), "currency not supported");
 
