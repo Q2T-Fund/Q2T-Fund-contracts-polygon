@@ -265,8 +265,48 @@ describe("Self-fund happy flow", function() {
             }]
           });
 
-        //deploy stuff        
-        const Community = await ethers.getContractFactory("Community");
+        //deploy stuff 
+        const GigValidator = await ethers.getContractFactory("GigValidator");
+        gigValidator = await GigValidator.deploy(chainlink.address, ethers.utils.toUtf8Bytes(chainlink.jobId));
+        await gigValidator.deployed();
+        
+        const DITOTokenFactory = await ethers.getContractFactory("DITOTokenFactory");
+        ditoTokenFactory = await DITOTokenFactory.deploy();
+        await ditoTokenFactory.deployed();
+
+        const CommunityTreasuryFactory = await ethers.getContractFactory("CommunityTreasuryFactory");
+        communityTreasuryFactory = await CommunityTreasuryFactory.deploy();
+        await communityTreasuryFactory.deployed();
+
+        const AddressesProvider = await ethers.getContractFactory("AddressesProvider");
+        addressesProvider = await AddressesProvider.deploy(
+            dai,
+            usdc,
+            communityTreasuryFactory.address,
+            ditoTokenFactory.address,
+            gigValidator.address,
+            landingPoolAP,
+            forwarder_address
+        );
+        await addressesProvider.deployed();
+
+        const TreasuryDAO = await ethers.getContractFactory("TreasuryDao");
+        treasuryDAO = await TreasuryDAO.deploy(0, addressesProvider.address, addresses[network].aaveDataProvider);
+        await treasuryDAO.deployed;
+
+        communitiesRegistry = await ethers.getContractAt(
+            "CommunitiesRegistry", 
+            await addressesProvider.communitiesRegistry()
+        );
+
+        await communitiesRegistry.setDao(0, treasuryDAO.address, false);
+
+        await communitiesRegistry.createCommunity(0);
+        
+        community = await ethers.getContractAt("Community", await communitiesRegistry.communities(0,0));
+        token = await ethers.getContractAt("DITOToken", await community.tokens());
+        communityTreasury = await ethers.getContractAt("CommunityTreasury", await community.communityTreasury());
+        /*const Community = await ethers.getContractFactory("Community");
         community = await Community.deploy(0, dai, usdc, landingPoolAP, forwarder_address);
         await community.deployed();
   
@@ -279,7 +319,7 @@ describe("Self-fund happy flow", function() {
         await treasuryDAO.deployed;
 
         await community.setTreasuryDAO(treasuryDAO.address);
-        await treasuryDAO.linkCommunity(communityTreasury.address);
+        await treasuryDAO.linkCommunity(communityTreasury.address);*/
     });
     it("Should deploy and connect timelock", async function() {
         const Timelock = await ethers.getContractFactory("WithdrawTimelock");
