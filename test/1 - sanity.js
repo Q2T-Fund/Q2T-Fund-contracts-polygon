@@ -302,24 +302,10 @@ describe("Self-fund happy flow", function() {
         await communitiesRegistry.setDao(0, treasuryDAO.address, false);
 
         await communitiesRegistry.createCommunity(0);
-        
+
         community = await ethers.getContractAt("Community", await communitiesRegistry.communities(0,0));
         token = await ethers.getContractAt("DITOToken", await community.tokens());
         communityTreasury = await ethers.getContractAt("CommunityTreasury", await community.communityTreasury());
-        /*const Community = await ethers.getContractFactory("Community");
-        community = await Community.deploy(0, dai, usdc, landingPoolAP, forwarder_address);
-        await community.deployed();
-  
-        const Token = await ethers.getContractFactory("DITOToken");
-        token = Token.attach(await community.tokens());
-        const CommunityTreasury = await ethers.getContractFactory("CommunityTreasury");
-        communityTreasury = CommunityTreasury.attach(await community.communityTreasury());
-        const TreasuryDAO = await ethers.getContractFactory("TreasuryDao");
-        treasuryDAO = await TreasuryDAO.deploy(0, addresses[network].aaveDataProvider, dai, usdc);
-        await treasuryDAO.deployed;
-
-        await community.setTreasuryDAO(treasuryDAO.address);
-        await treasuryDAO.linkCommunity(communityTreasury.address);*/
     });
     it("Should deploy and connect timelock", async function() {
         const Timelock = await ethers.getContractFactory("WithdrawTimelock");
