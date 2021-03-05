@@ -7,6 +7,7 @@ contract AddressesProvider {
     address public communitiesRegistry;
     address public communityTreasuryFactory;
     address public ditoTokenFactory;
+    address public gigsRegistryFactory;
     address public oracle;
 
     address public lendingPoolAP;
@@ -17,12 +18,14 @@ contract AddressesProvider {
         address _usdc,
         address _communityTreasuryFactory,
         address _ditoTokenFactory,
+        address _gigsRegistryFactory,
         address _oracle,
         address _lendingPoolAP,
         address _forwarder
     ) {
         communityTreasuryFactory = _communityTreasuryFactory;
         ditoTokenFactory = _ditoTokenFactory;
+        gigsRegistryFactory = _gigsRegistryFactory;
         oracle = _oracle;
         lendingPoolAP = _lendingPoolAP;
 

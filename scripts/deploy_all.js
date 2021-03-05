@@ -25,16 +25,18 @@ async function main() {
   console.log("Deploying prerequisites");
 
   const gigValidatorAddress = await deployOracle();
-  const { ditoTokenFactoryAddr, communityTreasuryFactoryAddr } = await deployFactories();
+  const { ditoTokenFactoryAddr, communityTreasuryFactoryAddr, gigsRegistryFactoryAddr } = await deployFactories();
   const addressesProviderAddress = await deployAddressesProvider(
     gigValidatorAddress,
     ditoTokenFactoryAddr,
-    communityTreasuryFactoryAddr
+    communityTreasuryFactoryAddr,
+    gigsRegistryFactoryAddr
   );
   const addressesProvider = await ethers.getContractAt("AddressesProvider", addressesProviderAddress);
   const communitiesRegistry = await ethers.getContractAt(
     "CommunitiesRegistry", 
-    await addressesProvider.communitiesRegistry());
+    await addressesProvider.communitiesRegistry()
+  );
 
   console.log("----------------------------");
   console.log("Deploying DAOs for 3 templates");
@@ -74,13 +76,15 @@ async function main() {
     console.log("Community Treasury address:", communityTreasury.address);
 
     console.log("Deploying gig registry...");
-    const GigsRegistry = await ethers.getContractFactory("GigsRegistry");
+    /*const GigsRegistry = await ethers.getContractFactory("GigsRegistry");
     const gigsRegistry = await GigsRegistry.deploy(community.address, "community" + i, gigValidatorAddress);
-    await gigsRegistry.deployTransaction.wait();
-    console.log("Gig registry address: ", gigsRegistry.address); 
+    await gigsRegistry.deployTransaction.wait();*/
+    await community.addGigsRegistry("community" + i);
+    const gigsRegistryAddress = await community.gigsRegistry();
+    console.log("Gig registry address: ", gigsRegistryAddress); 
 
-    console.log("Linking Community to gigs registry...");
-    await community.setGigsRegistry(gigsRegistry.address);
+    /*console.log("Linking Community to gigs registry...");
+    await community.setGigsRegistry(gigsRegistry.address);*/
     
     console.log("Deploying and activating timelock for community treasury...");
   
@@ -150,13 +154,19 @@ async function deployFactories() {
   const communityTreasuryFactory = await CommunityTreasuryFactory.deploy();
   console.log("Deploying community treasury factory: ", communityTreasuryFactory.address);
 
+  console.log("Deploying gigs registry factory");
+  const GigsRegistryFactory = await ethers.getContractFactory("GigsRegistryFactory");
+  const gigsRegistryFactory = await GigsRegistryFactory.deploy();
+  console.log("Deploying gigs registry factory: ", gigsRegistryFactory.address);
+
   return { 
     ditoTokenFactoryAddr: ditoTokenFactory.address, 
-    communityTreasuryFactoryAddr: communityTreasuryFactory.address 
+    communityTreasuryFactoryAddr: communityTreasuryFactory.address,
+    gigsRegistryFactoryAddr: gigsRegistryFactory.address
   };
 }
 
-async function deployAddressesProvider(oracle, ditoTokenFactory, communityTreasuryFactory,) {
+async function deployAddressesProvider(oracle, ditoTokenFactory, communityTreasuryFactory, gigsRegistry) {
   const [deployer] = await ethers.getSigners();
 
   console.log("Deploying addresses provider");
@@ -166,6 +176,7 @@ async function deployAddressesProvider(oracle, ditoTokenFactory, communityTreasu
     usdc,
     communityTreasuryFactory,
     ditoTokenFactory,
+    gigsRegistry,
     oracle,
     landingPoolAP,
     forwarder_address

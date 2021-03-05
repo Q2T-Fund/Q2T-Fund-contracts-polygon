@@ -20,6 +20,7 @@ let ditoTokenFactory;
 let communityTreasuryFactory;
 let addressesProvider;
 let communitiesRegistry;
+let gigsRegistryFactory;
 
 const forwarder_address = addresses[network].forwarder;
 const dai = addresses[network].dai;
@@ -51,8 +52,13 @@ describe("Deposit and borrow happy flow", function() {
             communityTreasuryFactory = await CommunityTreasuryFactory.deploy();
             await communityTreasuryFactory.deployed();
 
+            const GigsRegistryFactory = await ethers.getContractFactory("GigsRegistryFactory");
+            gigsRegistryFactory = await GigsRegistryFactory.deploy();
+            await gigsRegistryFactory.deployed();
+
             expect(ditoTokenFactory.address).not.to.be.undefined;
             expect(communityTreasuryFactory.address).not.to.be.undefined;
+            expect(gigsRegistryFactory.address).not.to.be.undefined;
         });
         it("Should deploy addresses provider and communities registry", async function() {
             const AddressesProvider = await ethers.getContractFactory("AddressesProvider");
@@ -61,6 +67,7 @@ describe("Deposit and borrow happy flow", function() {
                 usdc,
                 communityTreasuryFactory.address,
                 ditoTokenFactory.address,
+                gigsRegistryFactory.address,
                 gigValidator.address,
                 landingPoolAP,
                 forwarder_address
@@ -124,13 +131,16 @@ describe("Deposit and borrow happy flow", function() {
             expect(await treasuryDAO.communityTreasuries(0)).to.equal(communityTreasury.address);
         });
         it("Should deploy and link gig registry", async function() {
-            const GigsRegistry = await ethers.getContractFactory("GigsRegistry");
-            gigsRegistry = await GigsRegistry.deploy(community.address, "community1", gigValidator.address);
-            await gigsRegistry.deployed();
+            //const GigsRegistry = await ethers.getContractFactory("GigsRegistry");
+            //gigsRegistry = await GigsRegistry.deploy(community.address, "community1", gigValidator.address);
+            //await gigsRegistry.deployed();
     
-            await community.setGigsRegistry(gigsRegistry.address);
+            await community.addGigsRegistry("community1");
+            gigsRegistry = await ethers.getContractAt("GigsRegistry", await community.gigsRegistry());
             await gigsRegistry.enableOracle(false); //to ignore oracle for tests
     
+            expect(gigsRegistry.address).not.to.be.undefined;
+            expect(gigsRegistry.address).not.to.equal("0x0000000000000000000000000000000000000000");
             expect(await gigsRegistry.community()).to.equal(community.address);
             expect(await community.gigsRegistry()).to.equal(gigsRegistry.address);
         });
@@ -278,12 +288,17 @@ describe("Self-fund happy flow", function() {
         communityTreasuryFactory = await CommunityTreasuryFactory.deploy();
         await communityTreasuryFactory.deployed();
 
+        const GigsRegistryFactory = await ethers.getContractFactory("GigsRegistryFactory");
+        gigsRegistryFactory = await GigsRegistryFactory.deploy();
+        await gigsRegistryFactory.deployed();
+
         const AddressesProvider = await ethers.getContractFactory("AddressesProvider");
         addressesProvider = await AddressesProvider.deploy(
             dai,
             usdc,
             communityTreasuryFactory.address,
             ditoTokenFactory.address,
+            gigsRegistryFactory.address,
             gigValidator.address,
             landingPoolAP,
             forwarder_address

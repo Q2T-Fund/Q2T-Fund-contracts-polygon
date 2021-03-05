@@ -19,6 +19,7 @@ let ditoTokenFactory;
 let communityTreasuryFactory;
 let addressesProvider;
 let communitiesRegistry;
+let gigsRegistryFactory;
 
 const forwarder_address = addresses[network].forwarder;
 const dai = addresses[network].dai;
@@ -94,12 +95,17 @@ describe("Gig completion and quadratic distribution", function() {
         communityTreasuryFactory = await CommunityTreasuryFactory.deploy();
         await communityTreasuryFactory.deployed();
 
+        const GigsRegistryFactory = await ethers.getContractFactory("GigsRegistryFactory");
+        gigsRegistryFactory = await GigsRegistryFactory.deploy();
+        await gigsRegistryFactory.deployed();
+
         const AddressesProvider = await ethers.getContractFactory("AddressesProvider");
         addressesProvider = await AddressesProvider.deploy(
             dai,
             usdc,
             communityTreasuryFactory.address,
             ditoTokenFactory.address,
+            gigsRegistryFactory.address,
             gigValidator.address,
             landingPoolAP,
             forwarder_address
@@ -126,12 +132,14 @@ describe("Gig completion and quadratic distribution", function() {
             const CommunityTreasury = await ethers.getContractFactory("CommunityTreasury");
             communityTreasury = CommunityTreasury.attach(await community.communityTreasury());
 
-            const GigsRegistry = await ethers.getContractFactory("GigsRegistry");
-            gigsRegistry = await GigsRegistry.deploy(community.address, "community1", gigValidator.address);
-            await gigsRegistry.deployed();
+            //const GigsRegistry = await ethers.getContractFactory("GigsRegistry");
+            //gigsRegistry = await GigsRegistry.deploy(community.address, "community1", gigValidator.address);
+            await community.addGigsRegistry("community" + i);
+            gigsRegistry = await ethers.getContractAt("GigsRegistry", await community.gigsRegistry());
+            //await gigsRegistry.deployed();
 
             await gigsRegistry.enableOracle(false);
-            await community.setGigsRegistry(gigsRegistry.address);
+            //await community.setGigsRegistry(gigsRegistry.address);
 
             communities.push(community);
             communityTreasuries.push(communityTreasury);

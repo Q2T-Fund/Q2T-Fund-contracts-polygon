@@ -13,13 +13,14 @@ import "./ILendingPool.sol";
 import "./IAToken.sol";
 import "./IFiatTokenV2.sol";
 import "./CommunityTreasury.sol";
-import "./GigsRegistry.sol";
+//import "./GigsRegistry.sol";
 import {DataTypes} from './DataTypes.sol';
 
 import "./DITOToken.sol";
 import "./DITOTokenFactory.sol";
 import "./CommunityTreasuryFactory.sol";
 import "./AddressesProvider.sol";
+import "./GigsRegistryFactory.sol";
 //import "./WadRayMath.sol";
 
 /**
@@ -66,7 +67,8 @@ contract Community is BaseRelayRecipient, Ownable {
     //mapping(string => address) public depositableCurrenciesContracts;
     mapping (string => bool) public depositableCurrencies;
     address public communityTreasury;
-    GigsRegistry public gigsRegistry;
+    //GigsRegistry public gigsRegistry;
+    address public gigsRegistry;
     //ILendingPoolAddressesProvider public lendingPoolAP;
 
     // Get the forwarder address for the network
@@ -99,13 +101,25 @@ contract Community is BaseRelayRecipient, Ownable {
         depositableCurrencies["USDC"] = true;
     }
 
-    function setGigsRegistry(address _gigRegistry) public onlyOwner {
+    /*function setGigsRegistry(address _gigRegistry) public onlyOwner {
         require(address(gigsRegistry) == address(0), "already added");
         require(GigsRegistry(_gigRegistry).community() == address(this), "wrong community");
 
         gigsRegistry = GigsRegistry(_gigRegistry);
 
         emit GigRegistrySet(_gigRegistry);
+    }*/
+
+    function addGigsRegistry(string memory _communitIdString) public onlyOwner {
+        require(address(gigsRegistry) == address(0), "already added");
+        //require(GigsRegistry(_gigRegistry).community() == address(this), "wrong community");
+
+        gigsRegistry = GigsRegistryFactory(addressesProvider.gigsRegistryFactory()).deployGigsRegistry(
+            _communitIdString,
+            addressesProvider.oracle()
+        );
+
+        emit GigRegistrySet(gigsRegistry);
     }
 
     function setId(uint256 _id) public {
@@ -173,7 +187,7 @@ contract Community is BaseRelayRecipient, Ownable {
 
 
     function completeGig(uint256 _amount, address _project) public {
-        require(_msgSender() == address(gigsRegistry), "not gig registry");
+        require(_msgSender() == gigsRegistry, "not gig registry");
 
         if(_project != address(0)) {
             DITOToken(tokens).approve(communityTreasury, _amount.mul(1e18));
