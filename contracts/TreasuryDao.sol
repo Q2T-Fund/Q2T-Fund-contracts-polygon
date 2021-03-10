@@ -16,6 +16,7 @@ import "./IPriceOracle.sol";
 
 import "./ITreasuryDao.sol";
 import "./ICommunityTreasury.sol";
+import "./AddressesProvider.sol";
 
 import "./QuadraticDistribution.sol";
 
@@ -24,10 +25,10 @@ contract TreasuryDao is ITreasuryDao, Ownable {
 
     bytes4 public constant IDENTITY = 0x7eb0b43d;
 
+    address public addressesProvider;
     mapping (uint256 => address) public communityTreasuries;
     mapping (address => bool) public isTreasuryActive;
     uint256 public nextId;
-    mapping(string => address) public depositableCurrenciesContracts;
     mapping (address => mapping (address => uint256)) public repayableAmount; //address is underlying asset;
     IProtocolDataProvider public aaveProtocolDataProvider;
     DataTypes.CommunityTemplate public template;
@@ -35,16 +36,24 @@ contract TreasuryDao is ITreasuryDao, Ownable {
     mapping (address => uint256) public depositors;
     uint256 public totalDeposited;
 
-    constructor(DataTypes.CommunityTemplate _template, address _aaveDataProvider, address _dai, address _usdc) {
+    constructor(
+        DataTypes.CommunityTemplate _template, 
+        address _addressesProvider, 
+        address _aaveDataProvider
+    ) {
         require(_aaveDataProvider != address(0), "Aave data provider cannot be 0");
 
-        depositableCurrenciesContracts["DAI"] = _dai;
-        depositableCurrenciesContracts["USDC"] = _usdc;
         template = _template;
+        addressesProvider = _addressesProvider;
         aaveProtocolDataProvider = IProtocolDataProvider(_aaveDataProvider);
     }
 
-    function linkCommunity(address _treasuryAddress) public override onlyOwner {
+    function linkCommunity(address _treasuryAddress) public override {
+        require(
+            owner() == _msgSender() || 
+            _msgSender() == AddressesProvider(addressesProvider).communitiesRegistry(), 
+            "not owner or registry");
+
         ICommunityTreasury communityTreasury = ICommunityTreasury(_treasuryAddress);
 
         require(communityTreasury.template() == template, "template mismatch");
@@ -68,7 +77,9 @@ contract TreasuryDao is ITreasuryDao, Ownable {
 
         //delegation is for usdc for now
         (,,uint256 borrowingPower,,,) = lendingPool.getUserAccountData(address(this));
-        uint256 totalDeligating = borrowingPower.div(priceOracle.getAssetPrice(depositableCurrenciesContracts["USDC"]));
+        uint256 totalDeligating = borrowingPower.div(
+            priceOracle.getAssetPrice(
+                AddressesProvider(addressesProvider).currenciesAddresses("USDC")));
         totalDeligating = totalDeligating.mul(80).div(100); //lower borrowing a bit to avoid liquidations
 
         //quadratic distribution delegation to different communities
@@ -79,9 +90,8 @@ contract TreasuryDao is ITreasuryDao, Ownable {
 
     function deposit(string memory _currency, uint256 _amount, uint256 _repayment) public override {
         require(nextId > 0, "no communy treasury added");
-        address currencyAddress = address(
-            depositableCurrenciesContracts[_currency]
-        );
+        address currencyAddress = AddressesProvider(addressesProvider).currenciesAddresses(_currency);
+
         require(
             currencyAddress != address(0),
             "The currency passed as an argument is not enabled, sorry!"
@@ -180,7 +190,11 @@ contract TreasuryDao is ITreasuryDao, Ownable {
         n = 0;
         for (uint i = 0; i < nextId; i++) {
             if (didContribute[i]) {
-                _delegate(communityTreasuries[i], depositableCurrenciesContracts["USDC"], weighted[n].div(1e12)); //for usdc
+                _delegate(
+                    communityTreasuries[i], 
+                    AddressesProvider(addressesProvider).currenciesAddresses("USDC"), 
+                    weighted[n].div(1e12)
+                ); //for usdc
                 //TODO: call treasury reset
                 n++;
             }

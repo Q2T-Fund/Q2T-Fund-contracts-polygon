@@ -13,10 +13,14 @@ import "./ILendingPool.sol";
 import "./IAToken.sol";
 import "./IFiatTokenV2.sol";
 import "./CommunityTreasury.sol";
-import "./GigsRegistry.sol";
+//import "./GigsRegistry.sol";
 import {DataTypes} from './DataTypes.sol';
 
 import "./DITOToken.sol";
+import "./DITOTokenFactory.sol";
+import "./CommunityTreasuryFactory.sol";
+import "./AddressesProvider.sol";
+import "./GigsRegistryFactory.sol";
 //import "./WadRayMath.sol";
 
 /**
@@ -51,18 +55,21 @@ contract Community is BaseRelayRecipient, Ownable {
     uint256 public constant INIT_TOKENS = 96000;
     
     // The address of the DITOToken ERC20 contract
-    DITOToken public tokens;
+    address public tokens;
+
+    AddressesProvider public addressesProvider; 
 
     uint256 public id;
     bool idSet;
     DataTypes.CommunityTemplate public template;
     mapping(address => bool) public enabledMembers;
     uint256 public numberOfMembers;
-    mapping(string => address) public depositableCurrenciesContracts;
-    string[] public depositableCurrencies;
-    CommunityTreasury public communityTreasury;
-    GigsRegistry public gigsRegistry;
-    ILendingPoolAddressesProvider public lendingPoolAP;
+    //mapping(string => address) public depositableCurrenciesContracts;
+    mapping (string => bool) public depositableCurrencies;
+    address public communityTreasury;
+    //GigsRegistry public gigsRegistry;
+    address public gigsRegistry;
+    //ILendingPoolAddressesProvider public lendingPoolAP;
 
     // Get the forwarder address for the network
     // you are using from
@@ -70,47 +77,53 @@ contract Community is BaseRelayRecipient, Ownable {
     // 0x25CEd1955423BA34332Ec1B60154967750a0297D is ropsten's one
     constructor(
         DataTypes.CommunityTemplate _template, 
-        address _dai,
-        address _usdc,
-        address _lendingPoolAP, 
+        address _addressesProvider,
         address _forwarder
     ) {
         idSet = false;
         template = _template;
+        addressesProvider = AddressesProvider(_addressesProvider);
         trustedForwarder = _forwarder;
-        lendingPoolAP = ILendingPoolAddressesProvider(_lendingPoolAP);
+        //lendingPoolAP = ILendingPoolAddressesProvider(_lendingPoolAP);
 
-        tokens = new DITOToken(INIT_TOKENS.mul(1e18));
-        communityTreasury = new CommunityTreasury(
+        tokens = DITOTokenFactory(addressesProvider.ditoTokenFactory()).deployToken(INIT_TOKENS.mul(1e18));
+        communityTreasury = CommunityTreasuryFactory(addressesProvider.communityTreasuryFactory()).deployTreasury(
             template, 
-            address(tokens),
+            tokens,
             msg.sender,
-            _dai,
-            _usdc,
-            _lendingPoolAP
+            address(addressesProvider)
         );
 
-        _join(address(communityTreasury), 2000, true);
-        communityTreasury.approveCommunity();
+        _join(communityTreasury, 2000, true);
+        CommunityTreasury(communityTreasury).approveCommunity();
 
-        depositableCurrencies.push("DAI");
-        depositableCurrencies.push("USDC");
-
-        depositableCurrenciesContracts["DAI"] = _dai;
-        depositableCurrenciesContracts["USDC"] = _usdc;
+        depositableCurrencies["DAI"] = true;
+        depositableCurrencies["USDC"] = true;
     }
 
-    function setGigsRegistry(address _gigRegistry) public onlyOwner {
+    /*function setGigsRegistry(address _gigRegistry) public onlyOwner {
         require(address(gigsRegistry) == address(0), "already added");
         require(GigsRegistry(_gigRegistry).community() == address(this), "wrong community");
 
         gigsRegistry = GigsRegistry(_gigRegistry);
 
         emit GigRegistrySet(_gigRegistry);
+    }*/
+
+    function addGigsRegistry(string memory _communitIdString) public onlyOwner {
+        require(address(gigsRegistry) == address(0), "already added");
+        //require(GigsRegistry(_gigRegistry).community() == address(this), "wrong community");
+
+        gigsRegistry = GigsRegistryFactory(addressesProvider.gigsRegistryFactory()).deployGigsRegistry(
+            _communitIdString,
+            addressesProvider.oracle()
+        );
+
+        emit GigRegistrySet(gigsRegistry);
     }
 
     function setId(uint256 _id) public {
-        require(msg.sender == address(communityTreasury), "not treasury");
+        require(msg.sender == communityTreasury, "not treasury");
         require(!idSet, "already set");
 
         id = _id;
@@ -120,7 +133,7 @@ contract Community is BaseRelayRecipient, Ownable {
     }
 
     function setTreasuryDAO(address _dao) public onlyOwner {
-        communityTreasury.setTreasuryDAO(_dao);
+        CommunityTreasury(communityTreasury).setTreasuryDAO(_dao);
     }
 
     /**
@@ -132,15 +145,15 @@ contract Community is BaseRelayRecipient, Ownable {
      }
 
     function _join(address _member, uint256 _amountOfDITOToRedeem, bool _isTreasury) internal {
-        require(address(communityTreasury) != address(0), "treasury not set");
+        require(communityTreasury != address(0), "treasury not set");
         require(numberOfMembers < 25, "community full"); //1st member is community treasure so there can actually be 25 members
         require(enabledMembers[_member] == false, "already member");
 
         enabledMembers[_member] = true;
         numberOfMembers = numberOfMembers.add(1);
-        tokens.addToWhitelist(_member, _isTreasury);
+        DITOToken(tokens).addToWhitelist(_member, _isTreasury);
 
-        tokens.transfer(_member, _amountOfDITOToRedeem.mul(1e18));
+        DITOToken(tokens).transfer(_member, _amountOfDITOToRedeem.mul(1e18));
 
         emit MemberAdded(_member, _amountOfDITOToRedeem);
     }
@@ -160,13 +173,13 @@ contract Community is BaseRelayRecipient, Ownable {
 
         // leaving user must first give allowance
         // then can call this
-        tokens.transferFrom(
+        DITOToken(tokens).transferFrom(
             _member,
             address(this),
-            tokens.balanceOf(_member)
+            DITOToken(tokens).balanceOf(_member)
         );
 
-        tokens.removeFromWhitelist(_member, _isTreasury);
+        DITOToken(tokens).removeFromWhitelist(_member, _isTreasury);
 
         emit MemberRemoved(_member);
     }
@@ -174,16 +187,16 @@ contract Community is BaseRelayRecipient, Ownable {
 
 
     function completeGig(uint256 _amount, address _project) public {
-        require(_msgSender() == address(gigsRegistry), "not gig registry");
+        require(_msgSender() == gigsRegistry, "not gig registry");
 
         if(_project != address(0)) {
-            tokens.approve(address(communityTreasury), _amount.mul(1e18));
-            communityTreasury.completeMilestone(_amount, _project);   
+            DITOToken(tokens).approve(communityTreasury, _amount.mul(1e18));
+            CommunityTreasury(communityTreasury).completeMilestone(_amount, _project);   
         }
     }
 
     function activateTreasuryTimelock() public onlyOwner {
-        communityTreasury.activateTimelock();
+        CommunityTreasury(communityTreasury).activateTimelock();
     }
     
 
@@ -204,7 +217,7 @@ contract Community is BaseRelayRecipient, Ownable {
 
     function _onlyEnabledCurrency(string memory _currency) internal view {
         require(
-            depositableCurrenciesContracts[_currency] != address(0),
+            depositableCurrencies[_currency],
             "not supported currency"
         );
     }

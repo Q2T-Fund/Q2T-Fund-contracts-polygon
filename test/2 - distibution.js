@@ -14,8 +14,12 @@ let communityTreasury;
 let treasuryDAO;
 let community;
 let gigsRegistry;
-let timelock;
 let gigValidator;
+let ditoTokenFactory;
+let communityTreasuryFactory;
+let addressesProvider;
+let communitiesRegistry;
+let gigsRegistryFactory;
 
 const forwarder_address = addresses[network].forwarder;
 const dai = addresses[network].dai;
@@ -79,35 +83,63 @@ describe("Gig completion and quadratic distribution", function() {
             }]
           });
 
-        //deploy stuff
-        const TreasuryDAO = await ethers.getContractFactory("TreasuryDao");
-        treasuryDAO = await TreasuryDAO.deploy(0, addresses[network].aaveDataProvider, dai, usdc);
-        await treasuryDAO.deployed;
-
         const GigValidator = await ethers.getContractFactory("GigValidator");
         gigValidator = await GigValidator.deploy(chainlink.address, ethers.utils.toUtf8Bytes(chainlink.jobId));
         await gigValidator.deployed();
         
-        for (let i = 0; i < communitiesNumber; i++) {
-            const Community = await ethers.getContractFactory("Community");
-            community = await Community.deploy(0, dai, usdc, landingPoolAP, forwarder_address);
-            await community.deployed();
+        const DITOTokenFactory = await ethers.getContractFactory("DITOTokenFactory");
+        ditoTokenFactory = await DITOTokenFactory.deploy();
+        await ditoTokenFactory.deployed();
 
-            
+        const CommunityTreasuryFactory = await ethers.getContractFactory("CommunityTreasuryFactory");
+        communityTreasuryFactory = await CommunityTreasuryFactory.deploy();
+        await communityTreasuryFactory.deployed();
+
+        const GigsRegistryFactory = await ethers.getContractFactory("GigsRegistryFactory");
+        gigsRegistryFactory = await GigsRegistryFactory.deploy();
+        await gigsRegistryFactory.deployed();
+
+        const AddressesProvider = await ethers.getContractFactory("AddressesProvider");
+        addressesProvider = await AddressesProvider.deploy(
+            dai,
+            usdc,
+            communityTreasuryFactory.address,
+            ditoTokenFactory.address,
+            gigsRegistryFactory.address,
+            gigValidator.address,
+            landingPoolAP,
+            forwarder_address
+        );
+        await addressesProvider.deployed();
+
+        const TreasuryDAO = await ethers.getContractFactory("TreasuryDao");
+        treasuryDAO = await TreasuryDAO.deploy(0, addressesProvider.address, addresses[network].aaveDataProvider);
+        await treasuryDAO.deployed;
+
+        communitiesRegistry = await ethers.getContractAt(
+            "CommunitiesRegistry", 
+            await addressesProvider.communitiesRegistry()
+        );
+
+        await communitiesRegistry.setDao(0, treasuryDAO.address, false);
+        
+        for (let i = 0; i < communitiesNumber; i++) {
+            await communitiesRegistry.createCommunity(0);
+
+            community = await ethers.getContractAt("Community", await communitiesRegistry.communities(0,i));
+            communityTreasury = await ethers.getContractAt("CommunityTreasury", await community.communityTreasury());
     
-            //const Token = await ethers.getContractFactory("DITOToken");
-            //token = Token.attach(await community.tokens());
             const CommunityTreasury = await ethers.getContractFactory("CommunityTreasury");
             communityTreasury = CommunityTreasury.attach(await community.communityTreasury());
 
-            const GigsRegistry = await ethers.getContractFactory("GigsRegistry");
-            gigsRegistry = await GigsRegistry.deploy(community.address, "community1", gigValidator.address);
-            await gigsRegistry.deployed();
+            //const GigsRegistry = await ethers.getContractFactory("GigsRegistry");
+            //gigsRegistry = await GigsRegistry.deploy(community.address, "community1", gigValidator.address);
+            await community.addGigsRegistry("community" + i);
+            gigsRegistry = await ethers.getContractAt("GigsRegistry", await community.gigsRegistry());
+            //await gigsRegistry.deployed();
 
-            await community.setGigsRegistry(gigsRegistry.address);
-
-            await community.setTreasuryDAO(treasuryDAO.address);
-            await treasuryDAO.linkCommunity(communityTreasury.address);
+            await gigsRegistry.enableOracle(false);
+            //await community.setGigsRegistry(gigsRegistry.address);
 
             communities.push(community);
             communityTreasuries.push(communityTreasury);

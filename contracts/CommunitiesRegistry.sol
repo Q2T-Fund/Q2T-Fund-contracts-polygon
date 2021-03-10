@@ -4,6 +4,7 @@ pragma solidity ^0.7.4;
 import "./Community.sol";
 import "./ITreasuryDao.sol";
 import "./DataTypes.sol";
+//import "./AddressesProvider.sol";
 
 /**
  * @title DistributedTown CommunitiesRegistry
@@ -13,30 +14,42 @@ import "./DataTypes.sol";
  */
 contract CommunitiesRegistry {
     event CommunityCreated(address _newCommunityAddress, DataTypes.CommunityTemplate _template);
+    event DaoSet(DataTypes.CommunityTemplate _template, address _dao);
 
     bytes4 public constant IDENTITY = 0x94635046;
 
-    mapping (DataTypes.CommunityTemplate => address) daos;
+    mapping (DataTypes.CommunityTemplate => address) public daos;
     mapping (DataTypes.CommunityTemplate => address[]) public communities;
 
-    address dai;
-    address usdc;
-    address lendingPoolAP;
-    address forwarder;
-    address gigValidator;
+    address public addressesProvider;
+
+    //address public dai;
+    //address public usdc;
+    //address public lendingPoolAP;
+    address public forwarder;
+    //address public gigValidator;
+
+    //address private tokenFactory;
+    //address private treasuryFactory;
 
     constructor(
-        address _dai,
-        address _usdc,
-        address _gigValidator,
-        address _lendingPoolAP,
+        address _addressesProvider,
         address _forwarder
     ) {
-        dai = _dai;
-        usdc = _usdc;
-        lendingPoolAP = _lendingPoolAP;
-        gigValidator = _gigValidator;
-        forwarder = _lendingPoolAP;
+        addressesProvider = _addressesProvider;
+        forwarder = _forwarder;
+    }
+
+    function setDao(DataTypes.CommunityTemplate _template, address _dao, bool _override) public {
+        if (_override) {
+            require(communities[_template].length == 0, "has communities");
+        } else {
+            require(daos[_template] == address(0), "already set");
+        }
+
+        daos[_template] = _dao;
+
+        emit DaoSet(_template, _dao);     
     }
 
     /**
@@ -49,9 +62,7 @@ contract CommunitiesRegistry {
 
         Community newCommunity = new Community(
             _template,
-            dai,
-            usdc,
-            lendingPoolAP,
+            addressesProvider,
             forwarder
         );
 
@@ -61,6 +72,8 @@ contract CommunitiesRegistry {
 
         newCommunity.setTreasuryDAO(dao);
         ITreasuryDao(dao).linkCommunity(address(newCommunity.communityTreasury()));
+
+        newCommunity.transferOwnership(msg.sender);
         
         emit CommunityCreated(newCommunityAddress, _template);
 
@@ -99,5 +112,9 @@ contract CommunitiesRegistry {
         if (!userFound) return address(0);
 
         return address(templateCommunities[i - 1]);
+    }
+
+    function getCommunitiesNumber(DataTypes.CommunityTemplate _template) public view returns (uint256) {
+        return communities[_template].length;
     }
 }

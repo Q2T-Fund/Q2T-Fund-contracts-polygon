@@ -78,7 +78,7 @@ contract GigsRegistry {
     }
 
     function confirmGig(bytes32 _gigHash) public returns (bool) {
-        if (!oracleDisabled || (msg.sender != address(oracle))) {
+        if (!oracleDisabled && (msg.sender != address(oracle))) {
             emit errorConfirmingGig(_gigHash, "Not oracle");
 
             return false;
