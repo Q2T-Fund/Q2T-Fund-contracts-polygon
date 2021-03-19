@@ -11,6 +11,7 @@ import "./gsn/BaseRelayRecipient.sol";
 import "./ILendingPoolAddressesProvider.sol";
 import "./ILendingPool.sol";
 import "./IAToken.sol";
+import './ICreditDelegationToken.sol';
 import {DataTypes} from './DataTypes.sol';
 
 import "./IDITOToken.sol";
@@ -19,6 +20,8 @@ import "./ITreasuryDao.sol";
 import "./Community.sol";
 import "./WithdrawTimelock.sol";
 import "./AddressesProvider.sol";
+
+import "./QuadraticDistribution.sol";
 
 contract CommunityTreasury is ICommunityTreasury, Ownable {
     using SafeMath for uint256;
@@ -39,6 +42,7 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
     uint256 public totalTokensReceived;
     address[] public projects;
     mapping(address => uint256[]) public projectContributions;
+    mapping(address => uint256) public projectAllocation;
     WithdrawTimelock public timelock;
     bool public timelockActive;
     mapping (address => mapping (address => uint256)) public funds;
@@ -79,13 +83,13 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
         emit TreasuryDaoSet(_dao);
     }
     
-    function setCommunity(address _community) public override onlyOwner {
+    /*function setCommunity(address _community) public override onlyOwner {
         require(!idSet, "treasury is already linked");
         community = _community;
         token.approve(community, type(uint256).max);
 
         emit CommunitySet(_community);
-    }
+    }*/
 
     function approveCommunity() public override {
         token.approve(community, type(uint256).max);
@@ -158,19 +162,34 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
 
     }
 
-    function borrowDelegated(string memory _currency, uint256 _amount) public override {
+    function receiveDistribution(string memory _currency, uint256 _amount, address _project) public override {
+        require(projectAllocation[_project] >= _amount, "< allocation");
+
+        IERC20 asset = IERC20(AddressesProvider(addressesProvider).currenciesAddresses(_currency));  
+
+        require(asset.balanceOf(address(this)) >= _amount, "< balance");
+
+        projectAllocation[_project] = projectAllocation[_project].sub(_amount);
+        asset.transfer(_project, _amount);
+
+        emit Distributed(_currency, _amount, _project);
+    }
+
+    function allocateDelegated() public {
         ILendingPool lendingPool = ILendingPool(
             ILendingPoolAddressesProvider(
                 AddressesProvider(addressesProvider).lendingPoolAP()).getLendingPool());
-        address asset = AddressesProvider(addressesProvider).currenciesAddresses(_currency);
+        address asset = AddressesProvider(addressesProvider).currenciesAddresses("USDC");
+        address stableDebtTokenAddress = lendingPool.getReserveData(asset).stableDebtTokenAddress;
+        
+        uint256 amount = ICreditDelegationToken(stableDebtTokenAddress).borrowAllowance(address(dao), address(this));
+        require(amount > 0, "nothing to allocate");
 
-        require(asset != address(0), "currency not supported");
-
-        lendingPool.borrow(asset, _amount, 1, 0, address(dao));
-        //add distribute function
+        lendingPool.borrow(asset, amount, 1, 0, address(dao));
+        _distribute(amount);
         _resetProjects();
 
-        emit Borrowed(_currency, _amount);
+        emit Borrowed("USDC", amount);
     }
 
     function getDitoBalance() public override view returns (uint256) {
@@ -214,5 +233,26 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
 
         delete projects;
         totalGigsCompleted = 0;
+    }
+
+    function _distribute(uint256 _fund) internal {
+        address[] memory contributedProjects = projects;
+        uint256[] memory unweigted = new uint256[](contributedProjects.length);
+
+        //get unweighted allocations
+        for (uint i = 0; i < contributedProjects.length; i++) {
+            unweigted[i] = QuadraticDistribution.calcUnweightedAlloc(projectContributions[contributedProjects[i]]);            
+        }
+
+        //get weights
+        uint256[] memory weights = QuadraticDistribution.calcWeights(unweigted, contributedProjects.length);
+
+        //get weighted allocations
+        uint256[] memory weighted = QuadraticDistribution.calcWeightedAlloc(_fund, weights);
+
+        //distribute funds
+        for (uint i = 0; i < contributedProjects.length; i++) {
+            projectAllocation[contributedProjects[i]] = projectAllocation[contributedProjects[i]].add(weighted[i]);
+        }
     }
 }

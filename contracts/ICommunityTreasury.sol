@@ -12,6 +12,7 @@ interface ICommunityTreasury {
     event ThersholdReached(uint256 _amount);
     event Borrowed(string _currency, uint256 _amount);
     event Funded(address _funder, address _currency, uint256 _amount);
+    event Distributed(string _currency, uint256 _amount, address _project);
 
     function dao() external view returns (ITreasuryDao);
     function template() external view returns (DataTypes.CommunityTemplate);
@@ -22,12 +23,12 @@ interface ICommunityTreasury {
     function projectsNum() external view returns (uint256);
 
     function setTreasuryDAO(address _dao) external;
-    function setCommunity(address _community) external;
+    //function setCommunity(address _community) external;
     function setId(uint256 _id) external;
     function approveCommunity() external;
     function completeMilestone(uint256 _amount, address _project) external;
     function getDitoBalance() external view returns (uint256);
-    function borrowDelegated(string memory _currency, uint256 _amount) external;
+    function receiveDistribution(string memory _currency, uint256 _amount, address _project) external;
 
     function addTimelock() external;
     function activateTimelock() external;
