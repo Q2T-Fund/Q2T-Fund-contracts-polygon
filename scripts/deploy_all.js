@@ -72,29 +72,30 @@ async function main() {
     console.log("Token address:", await community.tokens());
     console.log("Community balance: ", String(await token.balanceOf(community.address)));
 
+    console.log("Adding Community Treasury");
+
+    await communitiesRegistry.addCommunityTreasury(community.address);
+
     const communityTreasury = await ethers.getContractAt("CommunityTreasury", await community.communityTreasury());
     console.log("Community Treasury address:", communityTreasury.address);
 
+    console.log("Deploying and activating timelock for community treasury...");
+  
+    const Timelock = await ethers.getContractFactory("WithdrawTimelock");
+    const timelock = await Timelock.deploy(community.communityTreasury());
+    await timelock.deployed();
+  
+    console.log("Timelock address: ", timelock.address);
+  
+    await community.activateTreasuryTimelock();
+
     console.log("Deploying gig registry...");
-    /*const GigsRegistry = await ethers.getContractFactory("GigsRegistry");
-    const gigsRegistry = await GigsRegistry.deploy(community.address, "community" + i, gigValidatorAddress);
-    await gigsRegistry.deployTransaction.wait();*/
     await community.addGigsRegistry("community" + i);
     const gigsRegistryAddress = await community.gigsRegistry();
     console.log("Gig registry address: ", gigsRegistryAddress); 
 
     /*console.log("Linking Community to gigs registry...");
     await community.setGigsRegistry(gigsRegistry.address);*/
-    
-    console.log("Deploying and activating timelock for community treasury...");
-  
-    const Timelock = await ethers.getContractFactory("WithdrawTimelock");
-    const timelock = await Timelock.deploy(communityTreasury.address);
-    await timelock.deployed;
-  
-    console.log("Timelock address: ", timelock.address);
-  
-    await community.activateTreasuryTimelock();
   }
 
   if (network == "kovan") {

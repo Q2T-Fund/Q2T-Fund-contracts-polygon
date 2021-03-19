@@ -69,6 +69,7 @@ contract Community is BaseRelayRecipient, Ownable {
     address public communityTreasury;
     //GigsRegistry public gigsRegistry;
     address public gigsRegistry;
+    address public communitiesRegistry;
     //ILendingPoolAddressesProvider public lendingPoolAP;
 
     // Get the forwarder address for the network
@@ -84,9 +85,19 @@ contract Community is BaseRelayRecipient, Ownable {
         template = _template;
         addressesProvider = AddressesProvider(_addressesProvider);
         trustedForwarder = _forwarder;
+        communitiesRegistry = _msgSender();
         //lendingPoolAP = ILendingPoolAddressesProvider(_lendingPoolAP);
 
         tokens = DITOTokenFactory(addressesProvider.ditoTokenFactory()).deployToken(INIT_TOKENS.mul(1e18));
+
+        depositableCurrencies["DAI"] = true;
+        depositableCurrencies["USDC"] = true;
+    }
+
+    function addCommunityTreasury(address _dao) public returns (address) {
+        require(_msgSender() == communitiesRegistry, "not registry");
+        require(communityTreasury == address(0), "already set");
+
         communityTreasury = CommunityTreasuryFactory(addressesProvider.communityTreasuryFactory()).deployTreasury(
             template, 
             tokens,
@@ -97,8 +108,11 @@ contract Community is BaseRelayRecipient, Ownable {
         _join(communityTreasury, 2000, true);
         CommunityTreasury(communityTreasury).approveCommunity();
 
-        depositableCurrencies["DAI"] = true;
-        depositableCurrencies["USDC"] = true;
+        CommunityTreasury(communityTreasury).setTreasuryDAO(_dao);
+
+        emit TreasurySet(communityTreasury);
+
+        return communityTreasury;
     }
 
     /*function setGigsRegistry(address _gigRegistry) public onlyOwner {

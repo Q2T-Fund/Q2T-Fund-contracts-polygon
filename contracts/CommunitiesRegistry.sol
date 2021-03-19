@@ -15,6 +15,7 @@ import "./DataTypes.sol";
 contract CommunitiesRegistry {
     event CommunityCreated(address _newCommunityAddress, DataTypes.CommunityTemplate _template);
     event DaoSet(DataTypes.CommunityTemplate _template, address _dao);
+    event CommunityTreasurySet(address _community, address _treasury);
 
     bytes4 public constant IDENTITY = 0x94635046;
 
@@ -70,14 +71,24 @@ contract CommunitiesRegistry {
         //addCommunity(newCommunityAddress, _template);
         communities[_template].push(newCommunityAddress);
 
-        newCommunity.setTreasuryDAO(dao);
-        ITreasuryDao(dao).linkCommunity(address(newCommunity.communityTreasury()));
+        //newCommunity.setTreasuryDAO(dao);
+        //ITreasuryDao(dao).linkCommunity(address(newCommunity.communityTreasury()));
 
         newCommunity.transferOwnership(msg.sender);
         
         emit CommunityCreated(newCommunityAddress, _template);
 
         return newCommunityAddress;
+    }
+
+    function addCommunityTreasury(address _community) public {
+        DataTypes.CommunityTemplate template = Community(_community).template();
+        address dao = daos[template];
+
+        address treasury = Community(_community).addCommunityTreasury(dao);
+        ITreasuryDao(dao).linkCommunity(treasury);
+
+        emit CommunityTreasurySet(_community, treasury);
     }
 
     /**
