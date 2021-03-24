@@ -28,7 +28,7 @@ interface ICommunityTreasury {
     function approveCommunity() external;
     function completeMilestone(uint256 _amount, address _project) external;
     function getDitoBalance() external view returns (uint256);
-    function receiveDistribution(string memory _currency, uint256 _amount, address _project) external;
+    function receiveAllocation(string memory _currency, uint256 _amount, address _project) external;
 
     function addTimelock() external;
     function activateTimelock() external;

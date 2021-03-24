@@ -162,7 +162,7 @@ contract CommunityTreasury is ICommunityTreasury, Ownable {
 
     }
 
-    function receiveDistribution(string memory _currency, uint256 _amount, address _project) public override {
+    function receiveAllocation(string memory _currency, uint256 _amount, address _project) public override {
         require(projectAllocation[_project] >= _amount, "< allocation");
 
         IERC20 asset = IERC20(AddressesProvider(addressesProvider).currenciesAddresses(_currency));  

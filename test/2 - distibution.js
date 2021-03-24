@@ -127,10 +127,8 @@ describe("Gig completion and quadratic distribution", function() {
             await communitiesRegistry.createCommunity(0);
 
             community = await ethers.getContractAt("Community", await communitiesRegistry.communities(0,i));
+            await communitiesRegistry.addCommunityTreasury(community.address);
             communityTreasury = await ethers.getContractAt("CommunityTreasury", await community.communityTreasury());
-    
-            const CommunityTreasury = await ethers.getContractFactory("CommunityTreasury");
-            communityTreasury = CommunityTreasury.attach(await community.communityTreasury());
 
             //const GigsRegistry = await ethers.getContractFactory("GigsRegistry");
             //gigsRegistry = await GigsRegistry.deploy(community.address, "community1", gigValidator.address);
@@ -193,23 +191,29 @@ describe("Gig completion and quadratic distribution", function() {
             }
         }
     });
-    it("Should allow treasuries to borrow now", async function() {
+    it("Should allow treasuries to borrow (and distribute among projects) now", async function() {
         const stableDebtUsdcToken = await ethers.getContractAt("ICreditDelegationToken", stableDebtUsdc);
         const usdcToken = await ethers.getContractAt("IERC20", usdc);
 
         for (let i = 0; i < communitiesNumber; i++) {
-            expect(await stableDebtUsdcToken.borrowAllowance(
-                treasuryDAO.address, communityTreasuries[i].address)
-                ).to.equal(expectedAllocs[i]);
+            expect(
+                await stableDebtUsdcToken.borrowAllowance(
+                    treasuryDAO.address, communityTreasuries[i].address
+                )
+            ).to.equal(expectedAllocs[i]);
 
             if (expectedAllocs[i] != "0" ) {
-                await communityTreasuries[i].borrowDelegated("USDC",expectedAllocs[i])
+                await communityTreasuries[i].allocateDelegated();
             };
             
             expect(await usdcToken.balanceOf(communityTreasuries[i].address)).to.equal(expectedAllocs[i]);
             expect(await stableDebtUsdcToken.borrowAllowance(
                 treasuryDAO.address, communityTreasuries[i].address)
-                ).to.equal("0");
+            ).to.equal("0");
+
+            for (let j = 0; j < gigsProjects[i].length; j++) {
+                console.log("alloc ", gigsProjects[i][j], ": ", String(await communityTreasuries[i].projectAllocation(gigsProjects[i][j])))
+            }
         }
     });
 });
