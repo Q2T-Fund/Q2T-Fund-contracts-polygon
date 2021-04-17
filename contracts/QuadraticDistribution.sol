@@ -6,6 +6,8 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 library QuadraticDistribution {
     using SafeMath for uint256;
+
+    uint256 constant DEFAULT_PRECISION = 1000000; //extra zeroes after 100 represent digits after dot in percentages
     
     function calcUnweightedAlloc(uint256[] memory _contributions) internal pure returns (uint256) {
         uint256 unweightedAlloc = 0;
@@ -24,7 +26,7 @@ library QuadraticDistribution {
             allocSum = allocSum.add(_unweightedAllocs[i]);
         }
 
-        allocSum = allocSum.div(1000000); //extra zeroes after 100 represent digits after do in percentages
+        allocSum = allocSum.div(DEFAULT_PRECISION); 
 
         return allocSum;
     }
@@ -41,7 +43,7 @@ library QuadraticDistribution {
     }
 
     function calcWeightedAlloc(uint256 _funds, uint256[] memory _weights) internal pure returns (uint256[] memory) {
-        uint256 fundsAdj = _funds.div(1000000);
+        uint256 fundsAdj = _funds.div(DEFAULT_PRECISION);
         uint256[] memory weightedAlloc = new uint256[](_weights.length);
 
         for (uint256 i = 0; i < _weights.length; i++) {

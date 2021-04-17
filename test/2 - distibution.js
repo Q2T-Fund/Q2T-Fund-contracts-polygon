@@ -32,6 +32,13 @@ const chainlink = addresses[network].chainlink;
 
 const gigHashIncompl = "0xB3B3886F389F27BC1F2A41F0ADD45A84453F0D2A877FCD1225F13CD95953A8";
 
+/*const gigs = [
+    ["400", "100", "81", "144"], //comm 1
+    ["1600"], //comm 2
+    [], //comm 3
+    ["900", "900", "100"] //comm 4
+];*/
+
 const gigs = [
     ["400", "100", "81", "144"], //comm 1
     ["1600"], //comm 2
@@ -39,23 +46,38 @@ const gigs = [
     ["900", "900", "100"] //comm 4
 ];
 
+
+const projects = [
+    "0xf1f1f11543111111111111111111111111111111",
+    "0xf1f1f11111543111111122222222222222222222",
+    "0xf2f2f22456222222222222222222222222222222",
+    "0xf3f3f33333456333333333333333333333333333",
+    "0xf1f1f1fffffff456fffffffffffffffffffffff1",
+    "0xf1f1f1ffffffffff456ffffffffffffffffffff2",
+    "0xf1f1f1fffffffffffff456fffffffffffffffff3"
+];
+
 const gigsProjects = [
     [
-        "0x1111111111111111111111111111111111111111",
-        "0x1111111111111111111111111111111111111111",
-        "0x1111111111111111111122222222222222222222",
-        "0x1111111111111111111122222222222222222222"
+        projects[0],
+        projects[0],
+        projects[1],
+        projects[1],
     ],
     [
-        "0x2222222222222222222222222222222222222222"
+        projects[2]
     ],
     [],
     [
-        "0x3333333333333333333333333333333333333333",
-        "0x3333333333333333333333333333333333333333",
-        "0x3333333333333333333333333333333333333333"
+        projects[3],
+        projects[3],
+        projects[3]
     ]
 ];
+
+let projectsAllocs = [];
+
+let projectsWithAllocs = [];
 
 const expectedAllocs = [
     "17264980512",
@@ -211,8 +233,40 @@ describe("Gig completion and quadratic distribution", function() {
                 treasuryDAO.address, communityTreasuries[i].address)
             ).to.equal("0");
 
+            let allocs = new Map();
+
+            projectsWithAllocs.push([]);
+
             for (let j = 0; j < gigsProjects[i].length; j++) {
-                console.log("alloc ", gigsProjects[i][j], ": ", String(await communityTreasuries[i].projectAllocation(gigsProjects[i][j])))
+                if (!allocs.has(gigsProjects[i][j])) {
+                    allocs.set(gigsProjects[i][j], String(await communityTreasuries[i].projectAllocation(gigsProjects[i][j])));
+                    projectsWithAllocs[i].push(gigsProjects[i][j]);
+                }
+            }
+
+            projectsAllocs.push(allocs);
+        }
+
+        console.log(projectsAllocs);
+        console.log(projectsWithAllocs);
+    });
+    it("Should allow projects to get distribution according to allocation", async function() {
+        const usdcToken = await ethers.getContractAt("IERC20", usdc);
+
+        for (let i = 0; i < communitiesNumber; i++) {
+            for (let j = 0; j < projectsWithAllocs[i].length; j++) {
+                let balance = await usdcToken.balanceOf(projectsWithAllocs[i][j]);
+
+                await communityTreasuries[i].receiveAllocation(
+                    "USDC", 
+                    projectsAllocs[i].get(projectsWithAllocs[i][j]),
+                    projectsWithAllocs[i][j]
+                );
+
+                balance = (await usdcToken.balanceOf(projectsWithAllocs[i][j])).sub(balance);
+
+                expect(balance).to.equal(projectsAllocs[i].get(projectsWithAllocs[i][j]));
+                expect(await communityTreasuries[i].projectAllocation(projectsWithAllocs[i][j])).to.equal("0");
             }
         }
     });
