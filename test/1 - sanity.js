@@ -32,7 +32,7 @@ const landingPoolAP = addresses[network].landingPoolAP;
 const chainlink = addresses[network].chainlink;
 
 const gigHashIncompl = "0xB3B3886F389F27BC1F2A41F0ADD45A84453F0D2A877FCD1225F13CD95953A86";
-const gigProject = "0x1111111111111111111111111111111111111111";
+const gigProject = "0x111111111111111111111111111111111111111f";
 
 describe("Deposit and borrow happy flow", function() {
     describe("Deployment", function () {
@@ -116,13 +116,15 @@ describe("Deposit and borrow happy flow", function() {
             token = await ethers.getContractAt("DITOToken", await community.tokens());
 
             expect(await token.owner()).to.equal(community.address);
-            expect(await token.balanceOf(community.address)).to.equal("94000".concat(e18));
+            expect(await token.balanceOf(community.address)).to.equal("96000".concat(e18));
         });
-        it("Should have created community treasury", async function() {
+        it("Should create community treasury", async function() {
+            await communitiesRegistry.addCommunityTreasury(community.address);
             communityTreasury = await ethers.getContractAt("CommunityTreasury", await community.communityTreasury());
             
             expect(await communityTreasury.owner()).to.equal(community.address);
             expect(await token.balanceOf(communityTreasury.address)).to.equal("2000".concat(e18));
+            expect(await token.balanceOf(community.address)).to.equal("94000".concat(e18));
         });
         it("Should have linked community with dao", async function() {
             expect(await communityTreasury.id()).to.equal("0");
@@ -251,12 +253,37 @@ describe("Deposit and borrow happy flow", function() {
             //expect(await stableDebtDaiToken.borrowAllowance(treasuryDAO.address, communityTreasury.address)).to.equal(MAX_UINT);
             expect(await stableDebtUsdcToken.borrowAllowance(treasuryDAO.address, communityTreasury.address)).to.equal("604".concat("000000"));
         });
-        it("Should receive delegated credit", async function() {
-            await communityTreasury.borrowDelegated("USDC","604".concat("000000"));
-    
+        it("Should borrow delegated credit and allocate it to project", async function() {
+            await communityTreasury.allocateDelegated();
+
             const usdcToken = await ethers.getContractAt("IERC20", usdc);
     
             expect(await usdcToken.balanceOf(communityTreasury.address)).to.equal("604".concat("000000"));
+            expect(await communityTreasury.projectAllocation(gigProject)).to.equal("604".concat("000000"));
+        });
+        it("Should not allow receiving by project with no allocation", async function() {
+            expect(
+                communityTreasury.receiveAllocation("USDC", "1", "0x111111111111111111111111111111111111111e")
+            ).to.be.revertedWith("< allocation");
+        });
+        it("Should not allow receiving more than allocation", async function() {
+            expect(
+                communityTreasury.receiveAllocation("USDC", "604".concat("000001"), gigProject)
+            ).to.be.revertedWith("< allocation");
+        });
+        it("Should receive allocated credit", async function() {
+            await communityTreasury.receiveAllocation("USDC", "604".concat("000000"), gigProject);
+    
+            const usdcToken = await ethers.getContractAt("IERC20", usdc);
+    
+            expect(await usdcToken.balanceOf(gigProject)).to.equal("604".concat("000000"));
+
+        });
+        it("Should not be able to receive allocation again", async function() {
+            expect(await communityTreasury.projectAllocation(gigProject)).to.equal("0");
+            expect(
+                communityTreasury.receiveAllocation("USDC", "604".concat("000000"), gigProject)
+            ).to.be.revertedWith("< allocation");
         });
     })
     
@@ -317,6 +344,7 @@ describe("Self-fund happy flow", function() {
         await communitiesRegistry.setDao(0, treasuryDAO.address, false);
 
         await communitiesRegistry.createCommunity(0);
+        await communitiesRegistry.addCommunityTreasury(community.address);
 
         community = await ethers.getContractAt("Community", await communitiesRegistry.communities(0,0));
         token = await ethers.getContractAt("DITOToken", await community.tokens());

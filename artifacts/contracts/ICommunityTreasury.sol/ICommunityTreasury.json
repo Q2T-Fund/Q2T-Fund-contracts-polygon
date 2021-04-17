@@ -40,6 +40,31 @@
       "inputs": [
         {
           "indexed": false,
+          "internalType": "string",
+          "name": "_currency",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "_amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "_project",
+          "type": "address"
+        }
+      ],
+      "name": "Distributed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
           "internalType": "address",
           "name": "_funder",
           "type": "address"
@@ -135,24 +160,6 @@
     {
       "inputs": [],
       "name": "approveCommunity",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "_currency",
-          "type": "string"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "borrowDelegated",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -299,12 +306,22 @@
     {
       "inputs": [
         {
+          "internalType": "string",
+          "name": "_currency",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_amount",
+          "type": "uint256"
+        },
+        {
           "internalType": "address",
-          "name": "_community",
+          "name": "_project",
           "type": "address"
         }
       ],
-      "name": "setCommunity",
+      "name": "receiveAllocation",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

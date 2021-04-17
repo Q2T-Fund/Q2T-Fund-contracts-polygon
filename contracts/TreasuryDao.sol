@@ -89,7 +89,7 @@ contract TreasuryDao is ITreasuryDao, Ownable {
     }
 
     function deposit(string memory _currency, uint256 _amount, uint256 _repayment) public override {
-        require(nextId > 0, "no communy treasury added");
+        require(nextId > 0, "no community treasury added");
         address currencyAddress = AddressesProvider(addressesProvider).currenciesAddresses(_currency);
 
         require(
