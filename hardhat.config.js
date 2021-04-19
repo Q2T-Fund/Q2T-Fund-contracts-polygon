@@ -11,9 +11,14 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: process.env.ALCHEMY_URL,
+        url: "https://matic-mainnet-archive-rpc.bwarelabs.com",
         blockNumber: Number(process.env.ALCHEMY_BLOCK)
       }
+    },
+    matic: {
+      url: 'https://rpc-mainnet.maticvigil.com/',
+      gasPrice: 1000000000,
+      accounts: [process.env.PRIVATE_KEY]
     },
     kovan: {
       chainId: 42,
@@ -44,5 +49,8 @@ module.exports = {
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API
+  },
+  mocha: {
+    timeout: 100000
   }
 };

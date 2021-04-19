@@ -159,6 +159,12 @@ describe("Deposit and borrow happy flow", function() {
     });
     describe("Basic flow", function() {
         it("Should deposit DAI through treasry dao to aave", async function() {
+            const [ , sender ]  = await ethers.getSigners(); //need to send some gas funds to impersonated acc
+            await sender.sendTransaction({
+                to: process.env.IMPERSONATE, 
+                value: ethers.utils.parseEther("9000.0")
+            });
+
             await hre.network.provider.request({
                 method: "hardhat_impersonateAccount",
                 params: [process.env.IMPERSONATE]
@@ -166,9 +172,12 @@ describe("Deposit and borrow happy flow", function() {
     
             signer = await ethers.provider.getSigner(process.env.IMPERSONATE);
     
-            const Erc20 = await ethers.getContractFactory("ERC20", signer);
+            /*const Erc20 = await ethers.getContractFactory("ERC20", signer);
             const daiToken = Erc20.attach(dai);
-            const adaiToken = Erc20.attach(adai);
+            const adaiToken = Erc20.attach(adai);*/
+
+            const daiToken = await ethers.getContractAt("IERC20", dai, signer);
+            const adaiToken = await ethers.getContractAt("IERC20", adai, signer);
     
             const TreasuryDao = await ethers.getContractFactory("TreasuryDao", signer);
             const treasuryDaoImp = TreasuryDao.attach(treasuryDAO.address);
@@ -251,15 +260,15 @@ describe("Deposit and borrow happy flow", function() {
             const stableDebtUsdcToken = await ethers.getContractAt("ICreditDelegationToken", stableDebtUsdc);
     
             //expect(await stableDebtDaiToken.borrowAllowance(treasuryDAO.address, communityTreasury.address)).to.equal(MAX_UINT);
-            expect(await stableDebtUsdcToken.borrowAllowance(treasuryDAO.address, communityTreasury.address)).to.equal("604".concat("000000"));
+            expect(await stableDebtUsdcToken.borrowAllowance(treasuryDAO.address, communityTreasury.address)).to.equal("601".concat("000000"));
         });
         it("Should borrow delegated credit and allocate it to project", async function() {
             await communityTreasury.allocateDelegated();
 
             const usdcToken = await ethers.getContractAt("IERC20", usdc);
     
-            expect(await usdcToken.balanceOf(communityTreasury.address)).to.equal("604".concat("000000"));
-            expect(await communityTreasury.projectAllocation(gigProject)).to.equal("604".concat("000000"));
+            expect(await usdcToken.balanceOf(communityTreasury.address)).to.equal("601".concat("000000"));
+            expect(await communityTreasury.projectAllocation(gigProject)).to.equal("601".concat("000000"));
         });
         it("Should not allow receiving by project with no allocation", async function() {
             expect(
@@ -268,21 +277,21 @@ describe("Deposit and borrow happy flow", function() {
         });
         it("Should not allow receiving more than allocation", async function() {
             expect(
-                communityTreasury.receiveAllocation("USDC", "604".concat("000001"), gigProject)
+                communityTreasury.receiveAllocation("USDC", "601".concat("000001"), gigProject)
             ).to.be.revertedWith("< allocation");
         });
         it("Should receive allocated credit", async function() {
-            await communityTreasury.receiveAllocation("USDC", "604".concat("000000"), gigProject);
+            await communityTreasury.receiveAllocation("USDC", "601".concat("000000"), gigProject);
     
             const usdcToken = await ethers.getContractAt("IERC20", usdc);
     
-            expect(await usdcToken.balanceOf(gigProject)).to.equal("604".concat("000000"));
+            expect(await usdcToken.balanceOf(gigProject)).to.equal("601".concat("000000"));
 
         });
         it("Should not be able to receive allocation again", async function() {
             expect(await communityTreasury.projectAllocation(gigProject)).to.equal("0");
             expect(
-                communityTreasury.receiveAllocation("USDC", "604".concat("000000"), gigProject)
+                communityTreasury.receiveAllocation("USDC", "601".concat("000000"), gigProject)
             ).to.be.revertedWith("< allocation");
         });
     })

@@ -30,7 +30,7 @@ contract GigValidator is ChainlinkClient {
      * Fee: 0.1 LINK
      */
     constructor(address _oracle, bytes32 _jobId) public {
-        setPublicChainlinkToken();
+        setChainlinkToken(0xb0897686c545045aFc77CF20eC7A532E3120E0F1);
         oracle = _oracle;
         jobId = _jobId;
         fee = 0.1 * 10 ** 18; // 0.1 LINK

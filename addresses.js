@@ -1,31 +1,32 @@
 module.exports = {
     hardhat: {
         forwarder: "0xa530F85085C6FE2f866E7FdB716849714a89f4CD",
-        aaveDataProvider: "0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d",
-        landingPoolAP: "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5",
-        priceOracle: "0xb8be51e6563bb312cbb2aa26e352516c25c26ac1",
-        dai: "0x6b175474e89094c44da98b954eedeac495271d0f",
-        usdc: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        adai: "0x028171bca77440897b824ca71d1c56cac55b68a3",
-        stableDebtDai: "0x778A13D3eeb110A4f7bb6529F99c000119a08E92",
-        stableDebtUsdc: "0xE4922afAB0BbaDd8ab2a88E0C79d884Ad337fcA6",
+        aaveDataProvider: "0x7551b5D2763519d4e37e8B81929D336De671d46d",
+        landingPoolAP: "0xd05e3E715d945B59290df0ae8eF85c1BdB684744",
+        priceOracle: "0x0229f777b0fab107f9591a41d5f02e4e98db6f2d",
+        dai: "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063",
+        usdc: "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+        adai: "0x27F8D03b3a2196956ED754baDc28D73be8830A6e",
+        stableDebtDai: "0x2238101B7014C279aaF6b408A284E49cDBd5DB55",
+        stableDebtUsdc: "0xdeb05676dB0DB85cecafE8933c903466Bf20C572",
         chainlink: {
-            address: "0x2f90A6D021db21e1B2A077c5a37B3C7E75D15b7e",
-            jobId: "6d914edc36e14d6c880c9c55bda5bc04"
+            address: "0xb33D8A4e62236eA91F3a8fD7ab15A95B9B7eEc7D",
+            jobId: "6289d5af30684a4d9dd6b3f878a46202"
         }
     },
     localhost: {
         forwarder: "0xa530F85085C6FE2f866E7FdB716849714a89f4CD",
-        aaveDataProvider: "0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d",
-        landingPoolAP: "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5",
-        dai: "0x6b175474e89094c44da98b954eedeac495271d0f",
-        usdc: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        adai: "0x028171bca77440897b824ca71d1c56cac55b68a3",
-        stableDebtDai: "0x778A13D3eeb110A4f7bb6529F99c000119a08E92",
-        stableDebtUsdc: "0xE4922afAB0BbaDd8ab2a88E0C79d884Ad337fcA6",
+        aaveDataProvider: "0x7551b5D2763519d4e37e8B81929D336De671d46d",
+        landingPoolAP: "0xd05e3E715d945B59290df0ae8eF85c1BdB684744",
+        priceOracle: "0x0229f777b0fab107f9591a41d5f02e4e98db6f2d",
+        dai: "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063",
+        usdc: "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+        adai: "0x27F8D03b3a2196956ED754baDc28D73be8830A6e",
+        stableDebtDai: "0x2238101B7014C279aaF6b408A284E49cDBd5DB55",
+        stableDebtUsdc: "0xdeb05676dB0DB85cecafE8933c903466Bf20C572",
         chainlink: {
-            address: "0x2f90A6D021db21e1B2A077c5a37B3C7E75D15b7e",
-            jobId: "6d914edc36e14d6c880c9c55bda5bc04"
+            address: "0xb33D8A4e62236eA91F3a8fD7ab15A95B9B7eEc7D",
+            jobId: "6289d5af30684a4d9dd6b3f878a46202"
         }
     },
     mainnet: {
@@ -42,6 +43,21 @@ module.exports = {
         chainlink: {
             address: "0x2f90A6D021db21e1B2A077c5a37B3C7E75D15b7e",
             jobId: "6d914edc36e14d6c880c9c55bda5bc04"
+        }
+    },
+    matic: {
+        forwarder: "0xa530F85085C6FE2f866E7FdB716849714a89f4CD",
+        aaveDataProvider: "0x7551b5D2763519d4e37e8B81929D336De671d46d",
+        landingPoolAP: "0xd05e3E715d945B59290df0ae8eF85c1BdB684744",
+        priceOracle: "0x0229f777b0fab107f9591a41d5f02e4e98db6f2d",
+        dai: "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063",
+        usdc: "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+        adai: "0x27F8D03b3a2196956ED754baDc28D73be8830A6e",
+        stableDebtDai: "0x2238101B7014C279aaF6b408A284E49cDBd5DB55",
+        stableDebtUsdc: "0xdeb05676dB0DB85cecafE8933c903466Bf20C572",
+        chainlink: {
+            address: "0xb33D8A4e62236eA91F3a8fD7ab15A95B9B7eEc7D",
+            jobId: "6289d5af30684a4d9dd6b3f878a46202"
         }
     }
 }
