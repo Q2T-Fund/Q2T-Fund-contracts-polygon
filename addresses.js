@@ -9,6 +9,8 @@ module.exports = {
         adai: "0x27F8D03b3a2196956ED754baDc28D73be8830A6e",
         stableDebtDai: "0x2238101B7014C279aaF6b408A284E49cDBd5DB55",
         stableDebtUsdc: "0xdeb05676dB0DB85cecafE8933c903466Bf20C572",
+        variableDebtDai: "0x75c4d1Fb84429023170086f06E682DcbBF537b7d",
+        variableDebtUsdc: "0x248960A9d75EdFa3de94F7193eae3161Eb349a12",
         chainlink: {
             address: "0xb33D8A4e62236eA91F3a8fD7ab15A95B9B7eEc7D",
             jobId: "6289d5af30684a4d9dd6b3f878a46202"
@@ -24,6 +26,8 @@ module.exports = {
         adai: "0x27F8D03b3a2196956ED754baDc28D73be8830A6e",
         stableDebtDai: "0x2238101B7014C279aaF6b408A284E49cDBd5DB55",
         stableDebtUsdc: "0xdeb05676dB0DB85cecafE8933c903466Bf20C572",
+        variableDebtDai: "0x75c4d1Fb84429023170086f06E682DcbBF537b7d",
+        variableDebtUsdc: "0x248960A9d75EdFa3de94F7193eae3161Eb349a12",
         chainlink: {
             address: "0xb33D8A4e62236eA91F3a8fD7ab15A95B9B7eEc7D",
             jobId: "6289d5af30684a4d9dd6b3f878a46202"
@@ -55,6 +59,8 @@ module.exports = {
         adai: "0x27F8D03b3a2196956ED754baDc28D73be8830A6e",
         stableDebtDai: "0x2238101B7014C279aaF6b408A284E49cDBd5DB55",
         stableDebtUsdc: "0xdeb05676dB0DB85cecafE8933c903466Bf20C572",
+        variableDebtDai: "0x75c4d1Fb84429023170086f06E682DcbBF537b7d",
+        variableDebtUsdc: "0x248960A9d75EdFa3de94F7193eae3161Eb349a12",
         chainlink: {
             address: "0xb33D8A4e62236eA91F3a8fD7ab15A95B9B7eEc7D",
             jobId: "6289d5af30684a4d9dd6b3f878a46202"

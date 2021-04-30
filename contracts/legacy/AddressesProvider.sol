@@ -1,7 +1,10 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.7.4;
 
+import "./CommunitiesRegistry.sol";
+
 contract AddressesProvider {
+    address public communitiesRegistry;
     address public communityTreasuryFactory;
     address public ditoTokenFactory;
     address public gigsRegistryFactory;
@@ -17,7 +20,8 @@ contract AddressesProvider {
         address _ditoTokenFactory,
         address _gigsRegistryFactory,
         address _oracle,
-        address _lendingPoolAP
+        address _lendingPoolAP,
+        address _forwarder
     ) {
         communityTreasuryFactory = _communityTreasuryFactory;
         ditoTokenFactory = _ditoTokenFactory;
@@ -27,5 +31,12 @@ contract AddressesProvider {
 
         currenciesAddresses["DAI"] = _dai;
         currenciesAddresses["USDC"] = _usdc;
+
+        CommunitiesRegistry communitiesRegistryContract = new CommunitiesRegistry(
+            address(this),
+            _forwarder
+        );
+
+        communitiesRegistry = address(communitiesRegistryContract);
     }
 }

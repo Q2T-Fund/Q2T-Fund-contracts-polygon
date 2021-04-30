@@ -28,6 +28,7 @@ const adai = addresses[network].adai;
 const stableDebtDai = addresses[network].stableDebtDai;
 const usdc = addresses[network].usdc;
 const stableDebtUsdc = addresses[network].stableDebtUsdc;
+const variableDebtUsdc = addresses[network].variableDebtUsdc;
 const landingPoolAP = addresses[network].landingPoolAP;
 const chainlink = addresses[network].chainlink;
 
@@ -257,10 +258,10 @@ describe("Deposit and borrow happy flow", function() {
         it("Shoud trigger credit delegation once DITO theshold reached", async function() {
             //Threshold was reached in previos test. This one just checks the delegation
             //const stableDebtDaiToken = await ethers.getContractAt("ICreditDelegationToken", stableDebtDai);
-            const stableDebtUsdcToken = await ethers.getContractAt("ICreditDelegationToken", stableDebtUsdc);
+            const debtUsdcToken = await ethers.getContractAt("ICreditDelegationToken", variableDebtUsdc);
     
             //expect(await stableDebtDaiToken.borrowAllowance(treasuryDAO.address, communityTreasury.address)).to.equal(MAX_UINT);
-            expect(await stableDebtUsdcToken.borrowAllowance(treasuryDAO.address, communityTreasury.address)).to.equal("601".concat("000000"));
+            expect(await debtUsdcToken.borrowAllowance(treasuryDAO.address, communityTreasury.address)).to.equal("601".concat("000000"));
         });
         it("Should borrow delegated credit and allocate it to project", async function() {
             await communityTreasury.allocateDelegated();
@@ -305,11 +306,17 @@ describe("Self-fund happy flow", function() {
             method: "hardhat_reset",
             params: [{
               forking: {
-                jsonRpcUrl: process.env.ALCHEMY_URL,
+                jsonRpcUrl: "https://matic-mainnet-archive-rpc.bwarelabs.com",
                 blockNumber: Number(process.env.ALCHEMY_BLOCK)
               }
             }]
           });
+
+        const [ ,, sender ]  = await ethers.getSigners(); //need to send some gas funds to impersonated acc
+        await sender.sendTransaction({
+            to: process.env.IMPERSONATE, 
+            value: ethers.utils.parseEther("9000.0")
+        });
 
         //deploy stuff 
         const GigValidator = await ethers.getContractFactory("GigValidator");
