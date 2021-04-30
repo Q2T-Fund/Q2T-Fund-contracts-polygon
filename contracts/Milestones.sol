@@ -1,134 +1,175 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.7.4;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "./IProject.sol";
-import "./ICommunity.sol";
+import "./dito-contracts/Community.sol";
+import "./dito-contracts/Projects.sol";
 
 // TODO: figure out rates.
 // TODO: transfer tokens.
 // TODO: 1 milestones instance per community
-contract Milestones {
+contract Milestones is IERC721Metadata, ERC721 {
     using Counters for Counters.Counter;
 
     event MilestoneCreated(address _creator, uint256 _milestoneId);
-    event MilestoneCompleted(address _creator, address _milestoneCompleter, uint256 _milestoneId);
-    event MilestoneTaken(address _creator, address _taker, uint256 _milestoneTaker);
-    event MilestoneSubmitted(address _creator, address _milestoneSubmitter, uint256 _milestoneId);
-    event MilestoneValidated(uint256 _milestoneId, address _creator, string _milestoneHash);
+    event MilestoneCompleted(uint256 _milestoneId);
+    event MilestoneTaken(uint256 _milestoneId);
+    event MilestoneSubmitted(uint256 _milestoneId);
+    event MilestoneValidated(
+        uint256 _milestoneId,
+        bool transferedCredits,
+        uint256 creditsTransfered
+    );
 
     enum MilestoneStatus {Open, Taken, Submitted, Completed}
 
     Counters.Counter milestoneId;
 
     struct Milestone {
-        address owner;
+        address creator;
         address taker;
-        string milestoneHash;
         uint256 ditoCredits;
         MilestoneStatus status;
-        uint16 rate;
     }
 
-    address public community;
-    address public projects;
+    address public communityAddress;
 
     mapping(uint256 => Milestone) public milestones;
-    mapping(address => uint256[]) ownersToMilestones;
-    mapping(address => uint256[]) completedMilestones;
+    mapping(uint256 => uint256[]) public projectMilestones;
     mapping(uint256 => bool) isValidated;
+    Community community;
+    Projects projects;
 
-    constructor (address _community, address _projects) {
-        //TODO: check identities
-        require(ICommunity(_community).milestones() == address(0), "Community already has milestones");
-        community = _community;
-        projects = _projects;
+    constructor(address _communityAddress, address _projects)
+        ERC721("Milestones", "MLST")
+    {
+        community = Community(_communityAddress);
+        projects = Projects(_projects);
     }
 
+    // in the metadata uri - skills, title, description
+    function createMilestone(
+        address creator,
+        uint256 _ditoCredits,
+        string memory _metadataUrl,
+        uint256 _projectId
+    ) public {
+        // TODO: verify identity chainlink!
+        require(
+            community.isMember(creator),
+            "The creator of the milestone should be a member of the community."
+        );
+        // TODO: Calculate credits with chainlink
+        require(
+            _ditoCredits >= 6 && _ditoCredits <= 720,
+            "Invalid credits amount."
+        );
+        // TODO: check if project belongs to the same community
 
-    function createMilestone(uint256 ditoCredits) public {
         uint256 newMilestoneId = milestoneId.current();
-        milestones[milestoneId.current()] = Milestone(
-            msg.sender,
+
+        _mint(creator, newMilestoneId);
+        _setTokenURI(newMilestoneId, _metadataUrl);
+        milestones[newMilestoneId] = Milestone(
+            creator,
             address(0),
-            "",
-            ditoCredits,
-            MilestoneStatus.Open,
-            0
+            _ditoCredits,
+            MilestoneStatus.Open
         );
 
-        ownersToMilestones[msg.sender].push(
-            newMilestoneId
-        );
+        projectMilestones[_projectId].push(newMilestoneId);
+
         isValidated[newMilestoneId] = false;
         milestoneId.increment();
 
-        emit MilestoneCreated(msg.sender, newMilestoneId);
+        emit MilestoneCreated(creator, newMilestoneId);
     }
 
-    function takeMilestone(uint256 _milestoneId) public {
+    function takeMilestone(uint256 _milestoneId, address taker) public {
         require(
             milestones[_milestoneId].status == MilestoneStatus.Open,
             "This milestone is not open for being taken."
         );
-        require(isValidated[_milestoneId], "Milestone creation not yet validated.");
+        require(
+            isValidated[_milestoneId],
+            "Milestone creation not yet validated."
+        );
+        require(
+            ownerOf(_milestoneId) != taker,
+            "The creator can't take the gig"
+        );
+        require(
+            community.isMember(taker),
+            "The taker should be a community member."
+        );
 
-        milestones[_milestoneId].taker = msg.sender;
+        milestones[_milestoneId].taker = taker;
         milestones[_milestoneId].status = MilestoneStatus.Taken;
 
         isValidated[_milestoneId] = false;
 
-        emit MilestoneTaken(milestones[_milestoneId].owner, msg.sender, _milestoneId);
+        emit MilestoneTaken(_milestoneId);
     }
 
-    function submitMilestone(uint256 _milestoneId) public {
+    function submitMilestone(uint256 _milestoneId, address submitter) public {
         require(
             milestones[_milestoneId].status == MilestoneStatus.Taken,
             "This milestone is not yet taken."
         );
-        require(isValidated[_milestoneId], "Milestone taken not yet validated.");
+        require(
+            isValidated[_milestoneId],
+            "Milestone taken not yet validated."
+        );
+        require(
+            milestones[_milestoneId].taker == submitter,
+            "Only the taker can submit the gig!"
+        );
 
         milestones[_milestoneId].status = MilestoneStatus.Submitted;
 
         isValidated[_milestoneId] = false;
 
-        emit MilestoneSubmitted(milestones[_milestoneId].owner, msg.sender, _milestoneId);
+        emit MilestoneSubmitted(_milestoneId);
     }
 
-    function completeMilestone(uint256 _milestoneId, uint16 rate) public {
+    function completeMilestone(uint256 _milestoneId, address completor) public {
         require(
             milestones[_milestoneId].status == MilestoneStatus.Submitted,
             "This milestone is not yet submitted."
         );
-        require(isValidated[_milestoneId], "Milestone submission not yet validated.");
-
-        milestones[_milestoneId].status = MilestoneStatus.Completed;
-        milestones[_milestoneId].rate = rate;
-
-        completedMilestones[msg.sender].push(
-            _milestoneId
+        require(
+            isValidated[_milestoneId],
+            "Milestone submission not yet validated."
+        );
+        require(
+            milestones[_milestoneId].creator == completor,
+            "Can be complete only by the creator."
         );
 
+        milestones[_milestoneId].status = MilestoneStatus.Completed;
         isValidated[_milestoneId] = false;
 
-        emit MilestoneCompleted(milestones[_milestoneId].owner, msg.sender, _milestoneId);
+        emit MilestoneCompleted(_milestoneId);
     }
 
-    function validate(uint256 _milestoneId, string calldata _milestoneHash)
-        public
-    {
+    function validate(uint256 _milestoneId) public {
         // Chainlink validate hash
         isValidated[_milestoneId] = true;
-        milestones[_milestoneId].milestoneHash = _milestoneHash;
 
-        emit MilestoneValidated(_milestoneId, milestones[_milestoneId].owner, _milestoneHash);
+        if (milestones[_milestoneId].status == MilestoneStatus.Completed) {
+            community.transferToTreasury(milestones[_milestoneId].ditoCredits);
+            emit MilestoneValidated(
+                _milestoneId,
+                true,
+                milestones[_milestoneId].ditoCredits
+            );
+        } else {
+            emit MilestoneValidated(_milestoneId, false, 0);
+        }
     }
 
-    function getOwnedMilestones(address owner) public view returns (uint256[] memory) {
-        return ownersToMilestones[owner];
-    }
-
-    function getCompletedMilestones(address taker) public view returns (uint256[] memory) {
-        return completedMilestones[taker];
+    function getMilestonesCount() public view returns (uint256) {
+        return milestoneId.current();
     }
 }

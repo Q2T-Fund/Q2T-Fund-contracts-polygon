@@ -19,5 +19,11 @@
     "@opengsn/gsn": "^2.1.0",
     "@openzeppelin/contracts": "3.4.0",
     "dotenv": "^8.2.0"
+  },
+
+  "scripts": {
+    "chain": "hardhat node",
+    "test": "hardhat test --network hardhat",
+    "compile": "hardhat compile"
   }
 }
