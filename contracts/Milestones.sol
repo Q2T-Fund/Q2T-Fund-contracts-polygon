@@ -3,8 +3,8 @@ pragma solidity ^0.7.4;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "./dito-contracts/Community.sol";
-import "./dito-contracts/Projects.sol";
+import "./Community.sol";
+import "./Projects.sol";
 
 // TODO: figure out rates.
 // TODO: transfer tokens.
@@ -27,6 +27,7 @@ contract Milestones is IERC721Metadata, ERC721 {
     Counters.Counter milestoneId;
 
     struct Milestone {
+        uint256 projectId;
         address creator;
         address taker;
         uint256 ditoCredits;
@@ -38,6 +39,10 @@ contract Milestones is IERC721Metadata, ERC721 {
     mapping(uint256 => Milestone) public milestones;
     mapping(uint256 => uint256[]) public projectMilestones;
     mapping(uint256 => bool) isValidated;
+
+    mapping(uint256 => uint256[]) contributionsPerProject;
+    uint256[] totalContributions;
+
     Community community;
     Projects projects;
 
@@ -72,6 +77,7 @@ contract Milestones is IERC721Metadata, ERC721 {
         _mint(creator, newMilestoneId);
         _setTokenURI(newMilestoneId, _metadataUrl);
         milestones[newMilestoneId] = Milestone(
+            _projectId,
             creator,
             address(0),
             _ditoCredits,
@@ -159,6 +165,14 @@ contract Milestones is IERC721Metadata, ERC721 {
 
         if (milestones[_milestoneId].status == MilestoneStatus.Completed) {
             community.transferToTreasury(milestones[_milestoneId].ditoCredits);
+            uint256 treasuryBalance = community.getTreasuryBalance();
+            if(treasuryBalance > 2000) {
+                contributionsPerProject[milestones[_milestoneId].projectId] = milestones[_milestoneId].ditoCredits;
+                totalContributions.push(milestones[_milestoneId].ditoCredits);
+            } else {
+                delete contributionsPerProject;
+                delete totalContributions;
+            }
             emit MilestoneValidated(
                 _milestoneId,
                 true,
@@ -169,7 +183,15 @@ contract Milestones is IERC721Metadata, ERC721 {
         }
     }
 
-    function getMilestonesCount() public view returns (uint256) {
-        return milestoneId.current();
+    // TODO: called only by Q2T?
+    function popContributionsPerProject(uint256 projectId) public view returns(uint256[]) {
+        uint256[] contributions = contributionsPerProject[projectId];
+        contributionsPerProject[projectId] = [];
+        return contributions;
+    }
+     function popTotalCommunityContributions() public view returns(uint256[]) {
+        uint256[] contributions = totalContributions;
+        delete totalContributions;
+        return contributions;
     }
 }
