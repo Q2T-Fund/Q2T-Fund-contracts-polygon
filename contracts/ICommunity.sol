@@ -13,7 +13,7 @@ interface ICommunity {
     function metadataUri() external view returns(string memory);
     function ownerId() external view returns(uint256);
     function activeMembersCount() external view returns(uint16);
-    function isMember(uint256 _id) external view returns(bool);
+    function isMember(address _member) external view returns(bool);
     function milestones() external view returns(address);
 
     // check if it's called only from deployer.
@@ -27,7 +27,7 @@ interface ICommunity {
         uint8 level3,
         string calldata uri,
         uint256 credits
-    ) external; 
+    ) external;
 
     function join(uint256 skillWalletTokenId, uint256 credits) external;
 
@@ -36,4 +36,6 @@ interface ICommunity {
     function getMembers() external view returns (uint256[] memory);
 
     function transferToTreasury(uint256 amount) external;
+
+    function getTreasuryBalance() external view returns (uint256);
 }

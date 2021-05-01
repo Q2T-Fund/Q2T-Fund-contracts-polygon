@@ -3,8 +3,10 @@ pragma solidity ^0.7.4;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "./Community.sol";
-import "./Projects.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Metadata.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "./ICommunity.sol";
+import "./IProjects.sol";
 
 // TODO: figure out rates.
 // TODO: transfer tokens.
@@ -38,19 +40,30 @@ contract Milestones is IERC721Metadata, ERC721 {
 
     mapping(uint256 => Milestone) public milestones;
     mapping(uint256 => uint256[]) public projectMilestones;
-    mapping(uint256 => bool) isValidated;
+    mapping(uint256 => bool) public isValidated;
 
     mapping(uint256 => uint256[]) contributionsPerProject;
-    uint256[] totalContributions;
+    uint256[] public contributedProjects;
+    uint256[] public totalContributions;
+    address public q2t;
+    bool public distributionInProgress;
 
-    Community community;
-    Projects projects;
+    ICommunity community;
+    IProjects projects;
 
     constructor(address _communityAddress, address _projects)
         ERC721("Milestones", "MLST")
     {
-        community = Community(_communityAddress);
-        projects = Projects(_projects);
+        //TODO: community and projects addresses checks
+        community = ICommunity(_communityAddress);
+        projects = IProjects(_projects);
+        q2t = msg.sender;
+    }
+
+    function setQ2T(address _q2t) public {
+        require(msg.sender == q2t, "Caller not Q2T");
+
+        q2t = _q2t;
     }
 
     // in the metadata uri - skills, title, description
@@ -140,6 +153,8 @@ contract Milestones is IERC721Metadata, ERC721 {
     }
 
     function completeMilestone(uint256 _milestoneId, address completor) public {
+        require(!distributionInProgress, "Distribution is in progress");
+
         require(
             milestones[_milestoneId].status == MilestoneStatus.Submitted,
             "This milestone is not yet submitted."
@@ -162,21 +177,25 @@ contract Milestones is IERC721Metadata, ERC721 {
     function validate(uint256 _milestoneId) public {
         // Chainlink validate hash
         isValidated[_milestoneId] = true;
+        Milestone memory milestone = milestones[_milestoneId];
 
-        if (milestones[_milestoneId].status == MilestoneStatus.Completed) {
-            community.transferToTreasury(milestones[_milestoneId].ditoCredits);
+        if (milestone.status == MilestoneStatus.Completed) {
+            community.transferToTreasury(milestone.ditoCredits);
             uint256 treasuryBalance = community.getTreasuryBalance();
-            if(treasuryBalance > 2000) {
-                contributionsPerProject[milestones[_milestoneId].projectId] = milestones[_milestoneId].ditoCredits;
-                totalContributions.push(milestones[_milestoneId].ditoCredits);
+            if (treasuryBalance > 2000) {
+                if (contributionsPerProject[milestone.projectId].length == 0) {
+                    contributedProjects.push(milestone.projectId);
+                }
+                contributionsPerProject[milestone.projectId].push(milestone.ditoCredits);
+                totalContributions.push(milestone.ditoCredits);
             } else {
-                delete contributionsPerProject;
+                delete contributionsPerProject[milestone.projectId];
                 delete totalContributions;
             }
             emit MilestoneValidated(
                 _milestoneId,
                 true,
-                milestones[_milestoneId].ditoCredits
+                milestone.ditoCredits
             );
         } else {
             emit MilestoneValidated(_milestoneId, false, 0);
@@ -184,14 +203,28 @@ contract Milestones is IERC721Metadata, ERC721 {
     }
 
     // TODO: called only by Q2T?
-    function popContributionsPerProject(uint256 projectId) public view returns(uint256[]) {
-        uint256[] contributions = contributionsPerProject[projectId];
-        contributionsPerProject[projectId] = [];
+    function popContributionsPerProject(uint256 projectId) public returns(uint256[] memory) {
+        require(msg.sender == q2t, "Caller not Q2T");
+
+        uint256[] memory contributions = contributionsPerProject[projectId];
+        delete contributionsPerProject[projectId];
         return contributions;
     }
-     function popTotalCommunityContributions() public view returns(uint256[]) {
-        uint256[] contributions = totalContributions;
+
+    function popTotalCommunityContributions() public returns(uint256[] memory) {
+        require(msg.sender == q2t, "Caller not Q2T");
+
+        uint256[] memory contributions = totalContributions;
         delete totalContributions;
         return contributions;
+    }
+
+    function projectsNum() public view returns (uint256) {
+        return contributedProjects.length;
+    }
+
+    function finishDistribution() public {
+        delete contributedProjects;
+        distributionInProgress = false;
     }
 }

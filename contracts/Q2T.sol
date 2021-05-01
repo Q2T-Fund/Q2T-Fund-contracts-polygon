@@ -6,6 +6,7 @@ import "./AddressesProvider.sol";
 import "./TemplatesTreasuriesWithReserves.sol";
 import "./DataTypes.sol";
 import "./IMilestones.sol";
+import "./MilestonesFactory.sol";
 import "./QuadraticDistribution.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
@@ -59,17 +60,28 @@ contract Q2T is ERC1155Holder {
         templatesReapayersTreasuries = address(templatesReapayersTreasuriesContract);
     }
 
+    function deployMilestones(DataTypes.Template _template, address _communityAddress, address _projects) public {
+        temapltesMilestones[_template].push(
+            MilestonesFactory(AddressesProvider(
+                addressesProvider).milestonesFactory()
+            ).deployMilestones(
+                _communityAddress, 
+                _projects
+            )
+        );
+    }
+
     function deposit(DataTypes.Template _template, uint256 _amount, uint256 _repayment) public {
         address currencyAddress = AddressesProvider(addressesProvider).currenciesAddresses("DAI");
         
-         IERC20 currency = IERC20(currencyAddress);
-         //uint256 amount = _amount.mul(1e18);
-         require(
-             currency.balanceOf(msg.sender) >= _amount,
-             "You don't have enough funds to invest."
-         );
+        IERC20 currency = IERC20(currencyAddress);
+        //uint256 amount = _amount.mul(1e18);
+        require(
+            currency.balanceOf(msg.sender) >= _amount,
+            "You don't have enough funds to invest."
+        );
         
-         currency.transferFrom(msg.sender, address(this), _amount);
+        currency.transferFrom(msg.sender, address(this), _amount);
 
         uint256 repaymentAmount = _amount.mul(_repayment).div(100);
         uint256 q2tAmount = _amount.sub(repaymentAmount);

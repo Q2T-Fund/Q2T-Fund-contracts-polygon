@@ -8,11 +8,13 @@ contract AddressesProvider {
     //address public oracle;
 
     address public lendingPoolAP;
+    address public milestonesFactory;
     mapping(string => address) public currenciesAddresses;
 
     constructor(
         address _dai,
         address _usdc,
+        address _milestonesFactory,
         //address _communityTreasuryFactory,
         //address _ditoTokenFactory,
         //address _gigsRegistryFactory,
@@ -24,6 +26,7 @@ contract AddressesProvider {
         //gigsRegistryFactory = _gigsRegistryFactory;
         //oracle = _oracle;
         lendingPoolAP = _lendingPoolAP;
+        milestonesFactory = _milestonesFactory;
 
         currenciesAddresses["DAI"] = _dai;
         currenciesAddresses["USDC"] = _usdc;
