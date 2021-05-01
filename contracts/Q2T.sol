@@ -5,16 +5,19 @@ pragma experimental ABIEncoderV2;
 import "./AddressesProvider.sol";
 import "./TemplatesTreasuries.sol";
 import "./DataTypes.sol";
+import "./IMilestones.sol";
+import "./QuadraticDistribution.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./ILendingPool.sol";
+import "./ICreditDelegationToken.sol";
 import "./IPriceOracle.sol";
 
 contract Q2T is ERC1155Holder {
     using SafeMath for uint256;
 
-    event ThresholdReached(uint256 _id);
+    event ThresholdReached(DataTypes.Template _template, address _milestones);
     event Deposited(
         DataTypes.Template _template, 
         address _depositor, 
@@ -24,19 +27,22 @@ contract Q2T is ERC1155Holder {
         uint256 _aTokensAmount
     );
     event Delegated(
-        DataTypes.Template _template,
         address _communityTreasury, 
         address _currency, 
         uint256 _amount
     );
 
     address public addressesProvider;
+    ILendingPoolAddressesProvider ledningPoolAP;
     address public templatesReapayersTreasuries;
     address public templatesTreasuries;
     uint256 public totalQ2TFund;
     uint256 public totalRepayerFund;
     mapping (address => mapping (address => uint256)) public repaymentAmounts;
     mapping (address => uint256) public depositors;
+    mapping (DataTypes.Template => address[]) public temapltesMilestones;
+    mapping (address => DataTypes.Template) public milestonesTemplates;
+    mapping (address => address) public milestonesTreasuries;
 
     constructor(
         address _addressesProvider
@@ -44,6 +50,8 @@ contract Q2T is ERC1155Holder {
         require(_addressesProvider != address(0), "Addressess provider cannot be 0");
 
         addressesProvider = _addressesProvider;
+        ledningPoolAP = ILendingPoolAddressesProvider(
+                AddressesProvider(addressesProvider).lendingPoolAP());
 
         TemplatesTreasuries templatesTreasuriesContract = new TemplatesTreasuries("");
         templatesTreasuries = address(templatesTreasuriesContract);
@@ -66,9 +74,7 @@ contract Q2T is ERC1155Holder {
         uint256 repaymentAmount = _amount.mul(_repayment).div(100);
         uint256 q2tAmount = _amount.sub(repaymentAmount);
         
-        ILendingPool lendingPool = ILendingPool(
-            ILendingPoolAddressesProvider(
-                AddressesProvider(addressesProvider).lendingPoolAP()).getLendingPool());
+        ILendingPool lendingPool = ILendingPool(ledningPoolAP.getLendingPool());
 
         IERC20 aToken = IERC20(lendingPool.getReserveData(currencyAddress).aTokenAddress);
         uint256 aTokenBalanceBefore = aToken.balanceOf(address(this));
@@ -96,27 +102,84 @@ contract Q2T is ERC1155Holder {
         emit Deposited(_template, msg.sender, "DAI", _amount, repaymentAmount, aTokenReceived);
     }
 
-    function thresholdReached(uint256 _id) public override {
-        require(msg.sender == communityTreasuries[_id], "wrong id");
-        require(isTreasuryActive[msg.sender], "treasury is not active");
+    function thresholdReached() public {
+        DataTypes.Template milestonesTemplate = milestonesTemplates[msg.sender];
+        require(milestonesTemplate != DataTypes.Template.NONE, "Sender not milestones");
 
-        IPriceOracle priceOracle = IPriceOracle(
-            ILendingPoolAddressesProvider(
-                AddressesProvider(addressesProvider).lendingPoolAP()).getPriceOracle());
-        ILendingPool lendingPool = ILendingPool(
-            ILendingPoolAddressesProvider(
-                AddressesProvider(addressesProvider).lendingPoolAP()).getLendingPool());
+        uint256 totalDeligating = TemplatesTreasuries(templatesTreasuries).getCurrentFund(milestonesTemplate);
+        TemplatesTreasuries(templatesTreasuries).burn(milestonesTemplate);
+        totalDeligating = totalDeligating.mul(50).div(100); //reduce to 50% 
+        //QUESTION: What to do with the rest
+
+        IPriceOracle priceOracle = IPriceOracle(ledningPoolAP.getPriceOracle());
+        ILendingPool lendingPool = ILendingPool(ledningPoolAP.getLendingPool());
 
         //delegation is for usdc for now
+        //calculate maximum delegation contrct can afford
         (,,uint256 borrowingPower,,,) = lendingPool.getUserAccountData(address(this));
-        uint256 totalDeligating = borrowingPower.div(
+        uint256 maxDeligation = borrowingPower.div(
             priceOracle.getAssetPrice(
                 AddressesProvider(addressesProvider).currenciesAddresses("USDC")));
-        totalDeligating = totalDeligating.mul(80).div(100); //lower borrowing a bit to avoid liquidations
+        maxDeligation = maxDeligation.mul(50).div(100); //lower borrowing to avoid liquidations
+
+        if(maxDeligation > totalDeligating) { //check if not deegating too much, probably paranoya
+            totalDeligating = maxDeligation;
+        }
 
         //quadratic distribution delegation to different communities
-        _distribute(totalDeligating.mul(1e18));
+        _distribute(milestonesTemplate, totalDeligating);
 
-        emit ThresholdReached(_id);
+        emit ThresholdReached(milestonesTemplate, msg.sender);
+    }
+
+    function _delegate (address _treasury, address _currency, uint256 _amount) internal {
+        ILendingPool lendingPool = ILendingPool(ledningPoolAP.getLendingPool());
+        address debtTokenAddress = lendingPool.getReserveData(_currency).variableDebtTokenAddress;
+        ICreditDelegationToken(debtTokenAddress).approveDelegation(_treasury, _amount);
+
+        emit Delegated(_treasury, _currency, _amount);
+    }
+
+    function _distribute(DataTypes.Template _template, uint256 _fund) internal {
+        uint256 projectsNum;
+        IMilestones currMilestones;
+        address[] memory milestones = temapltesMilestones[_template];
+        uint256 milestonesNum = milestones.length;
+        uint256[] memory unweigted = new uint256[](milestonesNum);
+        bool[] memory didContribute = new bool[](milestonesNum);
+        uint256 contributedNum = 0;
+        uint256 n = 0;
+
+        //get unweighted allocations
+        for (uint i = 0; i < milestonesNum; i++) {
+            didContribute[i] = false;
+            currMilestones = IMilestones(milestones[i]);
+            
+            //check if community has contributed projects
+            projectsNum = currMilestones.projectsNum();
+            if (projectsNum > 0) {
+                unweigted[n] = QuadraticDistribution.calcUnweightedAlloc(currMilestones.getAllContributions());
+                n++;
+                contributedNum++;
+                didContribute[i] = true;
+            }            
+        }
+
+        uint256[] memory weights = QuadraticDistribution.calcWeights(unweigted, contributedNum);
+
+        uint256[] memory weighted = QuadraticDistribution.calcWeightedAlloc(_fund, weights);
+
+        //and finally approve delegation
+        n = 0;
+        for (uint i = 0; i < milestonesNum; i++) {
+            if (didContribute[i]) {
+                _delegate(
+                    milestonesTreasuries[milestones[i]], 
+                    AddressesProvider(addressesProvider).currenciesAddresses("USDC"), 
+                    weighted[n].div(1e12)
+                ); 
+                n++;
+            }
+        }
     }
 }

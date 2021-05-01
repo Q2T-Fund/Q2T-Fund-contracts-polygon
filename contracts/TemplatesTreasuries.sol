@@ -71,4 +71,8 @@ contract TemplatesTreasuries is ERC1155 {
 
         emit TreasuryBurnt(_template, fund);
     }
+
+    function getCurrentFund(DataTypes.Template _template) public view returns (uint256) {
+        return funds[_template][funds[_template].length - 1];
+    }
 }

@@ -48,6 +48,7 @@ library DataTypes {
   enum InterestRateMode {NONE, STABLE, VARIABLE}
 
   enum Template {
+    NONE,
     OPENSOURCE,
     ART,
     LOCAL
