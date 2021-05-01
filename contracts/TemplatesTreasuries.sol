@@ -14,7 +14,7 @@ contract TemplatesTreasuries is ERC1155 {
     using SafeMath for uint256;
     using Counters for Counters.Counter;
 
-    event TreasuryFunded (
+    event TreasuryMinted (
         DataTypes.Template _template,
         uint256 _amount
     );
@@ -32,21 +32,21 @@ contract TemplatesTreasuries is ERC1155 {
 
     mapping(DataTypes.Template => Counters.Counter) private treasuryCounters;
     address public q2t;
-    mapping (DataTypes.Template => uint256[]) public funds;
+    mapping (uint8 => uint256[]) public funds;
 
     constructor(string memory _uri) ERC1155(_uri) {
         q2t = msg.sender;
     }
 
-    function mint(DataTypes.Template _template, uint256 _amount) public returns (uint256) {
+    function mint(DataTypes.Template _template, uint256 _amount) public {
         require(msg.sender == q2t, "Only Q2T can mint");
         require(_amount > 0, "Amount cant be 0");
         require(balanceOf(q2t, uint256(_template)) == 0, "Template already has token");
 
         _mint(q2t, uint256(_template), 1, "");
-        funds[_template].push(_amount);
+        funds[uint8(_template)].push(_amount);
 
-        emit TreasuryFunded(_template, _amount);
+        emit TreasuryMinted(_template, _amount);
     }
 
     function addFunds(DataTypes.Template _template, uint256 _amount) public {
@@ -54,18 +54,18 @@ contract TemplatesTreasuries is ERC1155 {
         require(balanceOf(q2t, uint256(_template)) == 1, "Template token not minted");
         require(_amount > 0, "Amount cant be 0");
 
-        uint256 currentId = funds[_template].length - 1;
+        uint256 currentId = funds[uint8(_template)].length - 1;
         
-        funds[_template][currentId] = funds[_template][currentId].add(_amount);
+        funds[uint8(_template)][currentId] = funds[uint8(_template)][currentId].add(_amount);
 
-        emit TreasuryFundsAdded(_template, _amount, funds[_template][currentId]);
+        emit TreasuryFundsAdded(_template, _amount, funds[uint8(_template)][currentId]);
     }
 
     function burn(DataTypes.Template _template) public {
         require(msg.sender == q2t, "Only Q2T can burn treasury");
         require(balanceOf(q2t, uint256(_template)) == 1, "Template token not minted");
 
-        uint256 fund = funds[_template][funds[_template].length - 1];
+        uint256 fund = funds[uint8(_template)][funds[uint8(_template)].length - 1];
 
         _burn(q2t, uint256(_template), 1);
 
@@ -73,6 +73,6 @@ contract TemplatesTreasuries is ERC1155 {
     }
 
     function getCurrentFund(DataTypes.Template _template) public view returns (uint256) {
-        return funds[_template][funds[_template].length - 1];
+        return funds[uint8(_template)][funds[uint8(_template)].length - 1];
     }
 }

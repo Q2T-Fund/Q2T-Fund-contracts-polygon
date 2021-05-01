@@ -3,7 +3,7 @@ pragma solidity ^0.7.4;
 pragma experimental ABIEncoderV2;
 
 import "./AddressesProvider.sol";
-import "./TemplatesTreasuries.sol";
+import "./TemplatesTreasuriesWithReserves.sol";
 import "./DataTypes.sol";
 import "./IMilestones.sol";
 import "./QuadraticDistribution.sol";
@@ -53,7 +53,7 @@ contract Q2T is ERC1155Holder {
         ledningPoolAP = ILendingPoolAddressesProvider(
                 AddressesProvider(addressesProvider).lendingPoolAP());
 
-        TemplatesTreasuries templatesTreasuriesContract = new TemplatesTreasuries("");
+        TemplatesTreasuries templatesTreasuriesContract = new TemplatesTreasuriesWithReserves("");
         templatesTreasuries = address(templatesTreasuriesContract);
         TemplatesTreasuries templatesReapayersTreasuriesContract = new TemplatesTreasuries("");
         templatesReapayersTreasuries = address(templatesReapayersTreasuriesContract);
@@ -84,10 +84,10 @@ contract Q2T is ERC1155Holder {
 
         uint256 aTokenReceived = aToken.balanceOf(address(this)).sub(aTokenBalanceBefore);
 
-        if(TemplatesTreasuries(templatesTreasuries).balanceOf(address(this), uint256(_template)) == 0) {
-            TemplatesTreasuries(templatesTreasuries).mint(_template, aTokenReceived);
+        if(TemplatesTreasuriesWithReserves(templatesTreasuries).balanceOf(address(this), uint256(_template)) == 0) {
+            TemplatesTreasuriesWithReserves(templatesTreasuries).mint(_template, aTokenReceived);
         } else {
-            TemplatesTreasuries(templatesTreasuries).addFunds(_template, aTokenReceived);
+            TemplatesTreasuriesWithReserves(templatesTreasuries).addFunds(_template, aTokenReceived);
         }
 
         if(TemplatesTreasuries(templatesReapayersTreasuries).balanceOf(address(this), uint256(_template)) == 0) {
@@ -106,10 +106,19 @@ contract Q2T is ERC1155Holder {
         DataTypes.Template milestonesTemplate = milestonesTemplates[msg.sender];
         require(milestonesTemplate != DataTypes.Template.NONE, "Sender not milestones");
 
-        uint256 totalDeligating = TemplatesTreasuries(templatesTreasuries).getCurrentFund(milestonesTemplate);
-        TemplatesTreasuries(templatesTreasuries).burn(milestonesTemplate);
-        totalDeligating = totalDeligating.mul(50).div(100); //reduce to 50% 
-        //QUESTION: What to do with the rest
+        uint256 totalDeligating;
+
+        if (TemplatesTreasuriesWithReserves(templatesTreasuries).balanceOf(address(this), uint256(milestonesTemplate)) == 1){
+            uint256 templateFunds = TemplatesTreasuriesWithReserves(templatesTreasuries).getCurrentFund(milestonesTemplate);
+            TemplatesTreasuriesWithReserves(templatesTreasuries).burn(milestonesTemplate);
+            totalDeligating = templateFunds.mul(50).div(100); //reduce to 50%
+            TemplatesTreasuriesWithReserves(templatesTreasuries).addReserves(
+                milestonesTemplate,
+                templateFunds.sub(totalDeligating)
+            );        
+        } else {
+            totalDeligating = TemplatesTreasuriesWithReserves(templatesTreasuries).useReserves(milestonesTemplate);
+        }
 
         IPriceOracle priceOracle = IPriceOracle(ledningPoolAP.getPriceOracle());
         ILendingPool lendingPool = ILendingPool(ledningPoolAP.getLendingPool());
