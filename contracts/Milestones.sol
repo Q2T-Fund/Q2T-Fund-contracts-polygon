@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "./ICommunity.sol";
 import "./IProjects.sol";
+import "./MilestoneStatuses.sol";
 
 // TODO: figure out rates.
 // TODO: transfer tokens.
@@ -24,8 +25,6 @@ contract Milestones is IERC721Metadata, ERC721 {
         uint256 creditsTransfered
     );
 
-    enum MilestoneStatus {Open, Taken, Submitted, Completed}
-
     Counters.Counter milestoneId;
 
     struct Milestone {
@@ -33,7 +32,7 @@ contract Milestones is IERC721Metadata, ERC721 {
         address creator;
         address taker;
         uint256 ditoCredits;
-        MilestoneStatus status;
+        MilestoneStatuses.MilestoneStatus status;
     }
 
     address public communityAddress;
@@ -94,7 +93,7 @@ contract Milestones is IERC721Metadata, ERC721 {
             creator,
             address(0),
             _ditoCredits,
-            MilestoneStatus.Open
+            MilestoneStatuses.MilestoneStatus.Open
         );
 
         projectMilestones[_projectId].push(newMilestoneId);
@@ -107,14 +106,6 @@ contract Milestones is IERC721Metadata, ERC721 {
 
     function takeMilestone(uint256 _milestoneId, address taker) public {
         require(
-            milestones[_milestoneId].status == MilestoneStatus.Open,
-            "This milestone is not open for being taken."
-        );
-        require(
-            isValidated[_milestoneId],
-            "Milestone creation not yet validated."
-        );
-        require(
             ownerOf(_milestoneId) != taker,
             "The creator can't take the gig"
         );
@@ -123,31 +114,20 @@ contract Milestones is IERC721Metadata, ERC721 {
             "The taker should be a community member."
         );
 
-        milestones[_milestoneId].taker = taker;
-        milestones[_milestoneId].status = MilestoneStatus.Taken;
+        _changeStatus(_milestoneId, milestones[_milestoneId].status, MilestoneStatuses.MilestoneStatus.Taken);
 
-        isValidated[_milestoneId] = false;
+        milestones[_milestoneId].taker = taker;
 
         emit MilestoneTaken(_milestoneId);
     }
 
     function submitMilestone(uint256 _milestoneId, address submitter) public {
         require(
-            milestones[_milestoneId].status == MilestoneStatus.Taken,
-            "This milestone is not yet taken."
-        );
-        require(
-            isValidated[_milestoneId],
-            "Milestone taken not yet validated."
-        );
-        require(
             milestones[_milestoneId].taker == submitter,
             "Only the taker can submit the gig!"
         );
 
-        milestones[_milestoneId].status = MilestoneStatus.Submitted;
-
-        isValidated[_milestoneId] = false;
+        _changeStatus(_milestoneId, milestones[_milestoneId].status, MilestoneStatuses.MilestoneStatus.Submitted);
 
         emit MilestoneSubmitted(_milestoneId);
     }
@@ -156,20 +136,11 @@ contract Milestones is IERC721Metadata, ERC721 {
         require(!distributionInProgress, "Distribution is in progress");
 
         require(
-            milestones[_milestoneId].status == MilestoneStatus.Submitted,
-            "This milestone is not yet submitted."
-        );
-        require(
-            isValidated[_milestoneId],
-            "Milestone submission not yet validated."
-        );
-        require(
             milestones[_milestoneId].creator == completor,
             "Can be complete only by the creator."
         );
 
-        milestones[_milestoneId].status = MilestoneStatus.Completed;
-        isValidated[_milestoneId] = false;
+        _changeStatus(_milestoneId, milestones[_milestoneId].status, MilestoneStatuses.MilestoneStatus.Completed);
 
         emit MilestoneCompleted(_milestoneId);
     }
@@ -179,7 +150,7 @@ contract Milestones is IERC721Metadata, ERC721 {
         isValidated[_milestoneId] = true;
         Milestone memory milestone = milestones[_milestoneId];
 
-        if (milestone.status == MilestoneStatus.Completed) {
+        if (milestone.status == MilestoneStatuses.MilestoneStatus.Completed) {
             community.transferToTreasury(milestone.ditoCredits);
             uint256 treasuryBalance = community.getTreasuryBalance();
             if (treasuryBalance > 2000) {
@@ -226,5 +197,24 @@ contract Milestones is IERC721Metadata, ERC721 {
     function finishDistribution() public {
         delete contributedProjects;
         distributionInProgress = false;
+    }
+
+    function _changeStatus(
+        uint256 _milestoneId,
+        MilestoneStatuses.MilestoneStatus _from, 
+        MilestoneStatuses.MilestoneStatus _to
+    ) private {
+        require (
+            MilestoneStatuses.isTransitionAllowed(_from, _to), 
+            "Status change not allowed"
+        );
+
+        require(
+            isValidated[_milestoneId],
+            "Milestone creation not yet validated."
+        );
+
+        milestones[_milestoneId].status = MilestoneStatuses.MilestoneStatus.Completed;
+        isValidated[_milestoneId] = false;
     }
 }
