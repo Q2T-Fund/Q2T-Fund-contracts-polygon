@@ -11,19 +11,16 @@ const MAX_UINT = "11579208923731619542357098500868790785326998466564056403945758
 let signer;
 let token;
 let communityTreasury;
+let treasuryDAO;
 let community;
 let gigsRegistry;
 let timelock;
 let gigValidator;
 let ditoTokenFactory;
 let communityTreasuryFactory;
+let addressesProvider;
 let communitiesRegistry;
 let gigsRegistryFactory;
-
-let q2t;
-let templatesTreasuries;
-let templatesReapayersTreasuries;
-let addressesProvider;
 
 const forwarder_address = addresses[network].forwarder;
 const dai = addresses[network].dai;
@@ -40,14 +37,14 @@ const gigProject = "0x111111111111111111111111111111111111111f";
 
 describe("Deposit and borrow happy flow", function() {
     describe("Deployment", function () {
-        /*it("Should deploy gig validator (oracle)", async function () {
+        it("Should deploy gig validator (oracle)", async function () {
             const GigValidator = await ethers.getContractFactory("GigValidator");
             gigValidator = await GigValidator.deploy(chainlink.address, ethers.utils.toUtf8Bytes(chainlink.jobId));
             await gigValidator.deployed();
     
             expect(gigValidator.address).not.to.be.undefined;
-        });*/
-        /*it("Should deploy contract factories", async function() {
+        });
+        it("Should deploy contract factories", async function() {
             const DITOTokenFactory = await ethers.getContractFactory("DITOTokenFactory");
             ditoTokenFactory = await DITOTokenFactory.deploy();
             await ditoTokenFactory.deployed();
@@ -63,45 +60,37 @@ describe("Deposit and borrow happy flow", function() {
             expect(ditoTokenFactory.address).not.to.be.undefined;
             expect(communityTreasuryFactory.address).not.to.be.undefined;
             expect(gigsRegistryFactory.address).not.to.be.undefined;
-        });*/
+        });
         it("Should deploy addresses provider and communities registry", async function() {
             const AddressesProvider = await ethers.getContractFactory("AddressesProvider");
             addressesProvider = await AddressesProvider.deploy(
                 dai,
                 usdc,
-                //communityTreasuryFactory.address,
-                //ditoTokenFactory.address,
-                //gigsRegistryFactory.address,
-                //gigValidator.address,
+                communityTreasuryFactory.address,
+                ditoTokenFactory.address,
+                gigsRegistryFactory.address,
+                gigValidator.address,
                 landingPoolAP,
+                forwarder_address
             );
             await addressesProvider.deployed();
 
             expect(addressesProvider.address).not.to.be.undefined;
-            //expect(await addressesProvider.communitiesRegistry()).not.to.equal("0x0000000000000000000000000000000000000000");
-            //expect(await addressesProvider.communityTreasuryFactory()).to.equal(communityTreasuryFactory.address);
-            //expect(await addressesProvider.ditoTokenFactory()).to.equal(ditoTokenFactory.address);
-            //expect(await addressesProvider.oracle()).to.equal(gigValidator.address);
+            expect(await addressesProvider.communitiesRegistry()).not.to.equal("0x0000000000000000000000000000000000000000");
+            expect(await addressesProvider.communityTreasuryFactory()).to.equal(communityTreasuryFactory.address);
+            expect(await addressesProvider.ditoTokenFactory()).to.equal(ditoTokenFactory.address);
+            expect(await addressesProvider.oracle()).to.equal(gigValidator.address);
             expect((await addressesProvider.currenciesAddresses("DAI")).toLowerCase()).to.equal(dai);
             expect((await addressesProvider.currenciesAddresses("USDC")).toLowerCase()).to.equal(usdc);
         });
-        it("Should deploy Q2T contract", async function() {
-            const Q2T = await ethers.getContractFactory("Q2T");
-            q2t = await Q2T.deploy(addressesProvider.address);
-            await q2t.deployed;
+        it("Should deploy and treasury dao", async function() {
+            const TreasuryDAO = await ethers.getContractFactory("TreasuryDao");
+            treasuryDAO = await TreasuryDAO.deploy(0, addressesProvider.address, addresses[network].aaveDataProvider);
+            await treasuryDAO.deployed;
             
-            expect(q2t.address).not.to.be.undefined;
+            expect(treasuryDAO.address).not.to.be.undefined;
         });
-        it("Should have deployed Template Treasuries along with Q2T", async function() {
-            templatesTreasuries = await q2t.templatesTreasuries();
-            templatesReapayersTreasuries = await q2t.templatesReapayersTreasuries();
-
-            expect(templatesTreasuries).not.to.equal("0x0000000000000000000000000000000000000000");
-            expect(templatesReapayersTreasuries).not.to.equal("0x0000000000000000000000000000000000000000");
-            expect(templatesTreasuries).not.to.equal(templatesReapayersTreasuries);
-
-        });
-        /*it("Should add treasury dao to communities registry", async function() {
+        it("Should add treasury dao to communities registry", async function() {
             communitiesRegistry = await ethers.getContractAt(
                 "CommunitiesRegistry", 
                 await addressesProvider.communitiesRegistry()
@@ -112,9 +101,9 @@ describe("Deposit and borrow happy flow", function() {
             expect(await communitiesRegistry.daos(0)).to.equal(treasuryDAO.address);
             expect(await communitiesRegistry.daos(1)).to.equal("0x0000000000000000000000000000000000000000");
             expect(await communitiesRegistry.daos(2)).to.equal("0x0000000000000000000000000000000000000000");
-        });*/
+        });
     });
-    /*describe("Community creation", function () {
+    describe("Community creation", function () {
         it("Should create new community", async function() {
             await communitiesRegistry.createCommunity(0);
 
@@ -168,9 +157,9 @@ describe("Deposit and borrow happy flow", function() {
         it("Should not allow to create community without deployed dao", async function() {
             expect(communitiesRegistry.createCommunity(1)).to.be.revertedWith("dao not set");;
         });
-    });*/
+    });
     describe("Basic flow", function() {
-        it("Should deposit DAI through Q2T dao to aave", async function() {
+        it("Should deposit DAI through treasry dao to aave", async function() {
             const [ , sender ]  = await ethers.getSigners(); //need to send some gas funds to impersonated acc
             await sender.sendTransaction({
                 to: process.env.IMPERSONATE, 
@@ -191,15 +180,15 @@ describe("Deposit and borrow happy flow", function() {
             const daiToken = await ethers.getContractAt("IERC20", dai, signer);
             const adaiToken = await ethers.getContractAt("IERC20", adai, signer);
     
-            const Q2T = await ethers.getContractFactory("Q2T", signer);
-            const q2tImp = Q2T.attach(q2t.address);
+            const TreasuryDao = await ethers.getContractFactory("TreasuryDao", signer);
+            const treasuryDaoImp = TreasuryDao.attach(treasuryDAO.address);
     
-            await daiToken.approve(q2tImp.address, "1000".concat(e18));
-            await q2tImp.deposit("DAI", 1000, 30);
+            await daiToken.approve(treasuryDaoImp.address, "1000".concat(e18));
+            await treasuryDaoImp.deposit("DAI", 1000, 30);
     
-            expect(await adaiToken.balanceOf(q2tImp.address)).to.equal("1000".concat(e18));
+            expect(await adaiToken.balanceOf(treasuryDAO.address)).to.equal("1000".concat(e18));
         });
-        /*it("Should create gig (without project)", async function() {
+        it("Should create gig (without project)", async function() {
             const [deployer] = await ethers.getSigners();
             const gigHash = gigHashIncompl.concat("0");
     
@@ -305,7 +294,137 @@ describe("Deposit and borrow happy flow", function() {
             expect(
                 communityTreasury.receiveAllocation("USDC", "601".concat("000000"), gigProject)
             ).to.be.revertedWith("< allocation");
-        });*/
+        });
     })
     
+});
+
+describe("Self-fund happy flow", function() {
+    before(async function() {
+        //first reset the fork
+        await hre.network.provider.request({
+            method: "hardhat_reset",
+            params: [{
+              forking: {
+                jsonRpcUrl: "https://matic-mainnet-archive-rpc.bwarelabs.com",
+                blockNumber: Number(process.env.ALCHEMY_BLOCK)
+              }
+            }]
+          });
+
+        const [ ,, sender ]  = await ethers.getSigners(); //need to send some gas funds to impersonated acc
+        await sender.sendTransaction({
+            to: process.env.IMPERSONATE, 
+            value: ethers.utils.parseEther("9000.0")
+        });
+
+        //deploy stuff 
+        const GigValidator = await ethers.getContractFactory("GigValidator");
+        gigValidator = await GigValidator.deploy(chainlink.address, ethers.utils.toUtf8Bytes(chainlink.jobId));
+        await gigValidator.deployed();
+        
+        const DITOTokenFactory = await ethers.getContractFactory("DITOTokenFactory");
+        ditoTokenFactory = await DITOTokenFactory.deploy();
+        await ditoTokenFactory.deployed();
+
+        const CommunityTreasuryFactory = await ethers.getContractFactory("CommunityTreasuryFactory");
+        communityTreasuryFactory = await CommunityTreasuryFactory.deploy();
+        await communityTreasuryFactory.deployed();
+
+        const GigsRegistryFactory = await ethers.getContractFactory("GigsRegistryFactory");
+        gigsRegistryFactory = await GigsRegistryFactory.deploy();
+        await gigsRegistryFactory.deployed();
+
+        const AddressesProvider = await ethers.getContractFactory("AddressesProvider");
+        addressesProvider = await AddressesProvider.deploy(
+            dai,
+            usdc,
+            communityTreasuryFactory.address,
+            ditoTokenFactory.address,
+            gigsRegistryFactory.address,
+            gigValidator.address,
+            landingPoolAP,
+            forwarder_address
+        );
+        await addressesProvider.deployed();
+
+        const TreasuryDAO = await ethers.getContractFactory("TreasuryDao");
+        treasuryDAO = await TreasuryDAO.deploy(0, addressesProvider.address, addresses[network].aaveDataProvider);
+        await treasuryDAO.deployed;
+
+        communitiesRegistry = await ethers.getContractAt(
+            "CommunitiesRegistry", 
+            await addressesProvider.communitiesRegistry()
+        );
+
+        await communitiesRegistry.setDao(0, treasuryDAO.address, false);
+
+        await communitiesRegistry.createCommunity(0);
+        await communitiesRegistry.addCommunityTreasury(community.address);
+
+        community = await ethers.getContractAt("Community", await communitiesRegistry.communities(0,0));
+        token = await ethers.getContractAt("DITOToken", await community.tokens());
+        communityTreasury = await ethers.getContractAt("CommunityTreasury", await community.communityTreasury());
+    });
+    it("Should deploy and connect timelock", async function() {
+        const Timelock = await ethers.getContractFactory("WithdrawTimelock");
+        timelock = await Timelock.deploy(communityTreasury.address);
+        await timelock.deployed;
+
+        await community.activateTreasuryTimelock();
+
+        expect(await communityTreasury.timelock()).to.equal(timelock.address);
+        expect(await communityTreasury.timelockActive()).to.equal(true);
+        expect(await timelock.treasury()).to.equal(communityTreasury.address);
+    });
+    it("Should add member to community", async function() {
+        await hre.network.provider.request({
+            method: "hardhat_impersonateAccount",
+            params: [process.env.IMPERSONATE]
+        });
+
+        signer = await ethers.provider.getSigner(process.env.IMPERSONATE);
+
+        const Community = await ethers.getContractFactory("Community", signer);
+        const communityImp = Community.attach(community.address);
+
+        await communityImp.join(1000);
+
+        expect(await community.numberOfMembers()).to.equal(2);
+        expect(await community.enabledMembers(process.env.IMPERSONATE)).to.equal(true);
+    });
+    it("Should fund the community and create a timelock", async function() {
+        await hre.network.provider.request({
+            method: "hardhat_impersonateAccount",
+            params: [process.env.IMPERSONATE]
+        });
+
+        signer = await ethers.provider.getSigner(process.env.IMPERSONATE);
+
+        const Erc20 = await ethers.getContractFactory("ERC20", signer);
+        const daiToken = Erc20.attach(dai);
+
+        const CommunityTreasury = await ethers.getContractFactory("CommunityTreasury", signer);
+        const communityTreasuryImp = CommunityTreasury.attach(communityTreasury.address);
+
+        await daiToken.approve(communityTreasuryImp.address, "1000".concat(e18));
+
+        await communityTreasuryImp.fund("DAI", 10);
+        const fundTimelock = await timelock.timelocks(process.env.IMPERSONATE, 0);
+
+        expect(await communityTreasury.getFunds(process.env.IMPERSONATE, daiToken.address)).to.equal("10".concat(e18));
+        expect(await communityTreasury.totalFunded(daiToken.address)).to.equal("10".concat(e18));
+        expect(await timelock.getTimelocksCount(process.env.IMPERSONATE)).to.equal(1);
+        expect(await timelock.withdrawableByLock(process.env.IMPERSONATE, daiToken.address, fundTimelock)).to.equal("10".concat(e18));
+        expect(await timelock.canWithdraw(process.env.IMPERSONATE, daiToken.address)).to.equal(0);       
+    });
+    it("Should deposit funing into dao", async function() {
+        //treasury already funded so only check dao
+        const adaiToken = await ethers.getContractAt("ERC20",adai);
+
+        expect(await adaiToken.balanceOf(treasuryDAO.address)).to.equal("10".concat(e18));
+        expect(await treasuryDAO.depositors(communityTreasury.address)).to.equal("10".concat(e18));
+        expect(await treasuryDAO.totalDeposited()).to.equal("10".concat(e18));
+        expect(await treasuryDAO.repayableAmount(communityTreasury.address, dai)).to.equal("10".concat(e18));        
+    })
 });

@@ -47,12 +47,11 @@ library DataTypes {
 
   enum InterestRateMode {NONE, STABLE, VARIABLE}
 
-  enum Template {
-    NONE,
-    OPENSOURCE,
-    ART,
-    LOCAL
-  }
+  enum CommunityTemplate {
+        OPENSOURCE,
+        ART,
+        LOCAL
+    }
 
   enum GigStatus {
     NONE,

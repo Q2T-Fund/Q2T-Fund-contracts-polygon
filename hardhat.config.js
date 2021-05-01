@@ -12,6 +12,7 @@ module.exports = {
     hardhat: {
       forking: {
         url: "https://matic-mainnet-archive-rpc.bwarelabs.com",
+        //url: process.env.MATICVIGIL_URL,
         blockNumber: Number(process.env.ALCHEMY_BLOCK)
       }
     },
