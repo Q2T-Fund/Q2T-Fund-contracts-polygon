@@ -52,8 +52,16 @@ describe("Deposit and borrow happy flow", function() {
             const CommunityTreasuryFactory = await ethers.getContractFactory("CommunityTreasuryFactory");
             communityTreasuryFactory = await CommunityTreasuryFactory.deploy();
             await communityTreasuryFactory.deployed();
+
+            const MilestonesLib = await ethers.getContractFactory("MilestoneStatuses");
+            const milestonesLib = await MilestonesLib.deploy();
+            await milestonesLib.deployed();
             
-            const MilestonesFactory = await ethers.getContractFactory("MilestonesFactory");
+            const MilestonesFactory = await ethers.getContractFactory("MilestonesFactory", {
+                libraries: {
+                    MilestoneStatuses: milestonesLib.address
+                }
+            });
             milestonesFactory = await MilestonesFactory.deploy();
             await milestonesFactory.deployed();
 
@@ -166,13 +174,14 @@ describe("Deposit and borrow happy flow", function() {
         });
     });*/
     describe("Basic flow", function() {
-        it("Should deposit DAI through Q2T dao to aave", async function() {
+        before(async function() {
             const [ , sender ]  = await ethers.getSigners(); //need to send some gas funds to impersonated acc
             await sender.sendTransaction({
                 to: process.env.IMPERSONATE, 
-                value: ethers.utils.parseEther("9000.0")
+                value: ethers.utils.parseEther("10.0")
             });
-
+        })
+        it("Should deposit DAI through Q2T dao to aave for template 1", async function() {
             await hre.network.provider.request({
                 method: "hardhat_impersonateAccount",
                 params: [process.env.IMPERSONATE]
@@ -191,9 +200,139 @@ describe("Deposit and borrow happy flow", function() {
             const q2tImp = Q2T.attach(q2t.address);
     
             await daiToken.approve(q2tImp.address, "1000".concat(e18));
-            await q2tImp.deposit("DAI", 1000, 30);
+            await q2tImp.deposit(1, "1000".concat(e18), 30);
     
-            expect(await adaiToken.balanceOf(q2tImp.address)).to.equal("1000".concat(e18));
+            expect(await adaiToken.balanceOf(q2tImp.address)).to.equal("700".concat(e18));
+            expect(await daiToken.balanceOf(q2tImp.address)).to.equal("300".concat(e18));
+        });
+        it("Should have issued treasury NFT for template 1 and assigned funds to it", async function() {
+            const templatesTreasuriesAddress = await q2t.templatesTreasuries();
+            const templatesTreasuries = await ethers.getContractAt("TemplatesTreasuriesWithReserves", templatesTreasuriesAddress);
+            const templatesReapayersTreasuriesAddress = await q2t.templatesReapayersTreasuries();
+            const templatesReapayersTreasuries = await ethers.getContractAt("TemplatesTreasuries", templatesReapayersTreasuriesAddress);
+
+            expect(await templatesTreasuries.balanceOf(q2t.address, 1)).to.equal("1");
+            expect(await templatesTreasuries.balanceOf(q2t.address, 2)).to.equal("0");
+            expect(await templatesTreasuries.balanceOf(q2t.address, 3)).to.equal("0");
+            expect(await templatesTreasuries.getCurrentFund(1)).to.equal("700".concat(e18)); 
+            expect(await templatesTreasuries.getCurrentFund(2)).to.equal("0");
+            expect(await templatesTreasuries.getCurrentFund(3)).to.equal("0");
+           
+            expect(await templatesTreasuries.balanceOf(q2t.address, 4)).to.equal("0");
+            expect(await templatesTreasuries.balanceOf(q2t.address, 5)).to.equal("0");
+            expect(await templatesTreasuries.balanceOf(q2t.address, 6)).to.equal("0");
+            expect(await templatesTreasuries.getCurrentReserve(1)).to.equal("0");
+            expect(await templatesTreasuries.getCurrentReserve(2)).to.equal("0");
+            expect(await templatesTreasuries.getCurrentReserve(3)).to.equal("0");
+
+            expect(await templatesReapayersTreasuries.balanceOf(q2t.address, 1)).to.equal("1");
+            expect(await templatesReapayersTreasuries.balanceOf(q2t.address, 2)).to.equal("0");
+            expect(await templatesReapayersTreasuries.balanceOf(q2t.address, 3)).to.equal("0");
+            expect(await templatesReapayersTreasuries.getCurrentFund(1)).to.equal("300".concat(e18));
+            expect(await templatesReapayersTreasuries.getCurrentFund(2)).to.equal("0");
+            expect(await templatesReapayersTreasuries.getCurrentFund(3)).to.equal("0");
+        });
+        it("Should deposit more DAI through Q2T dao to aave for template 1", async function() {
+            await hre.network.provider.request({
+                method: "hardhat_impersonateAccount",
+                params: [process.env.IMPERSONATE]
+            });
+    
+            signer = await ethers.provider.getSigner(process.env.IMPERSONATE);
+    
+            /*const Erc20 = await ethers.getContractFactory("ERC20", signer);
+            const daiToken = Erc20.attach(dai);
+            const adaiToken = Erc20.attach(adai);*/
+
+            const daiToken = await ethers.getContractAt("IERC20", dai, signer);
+            const adaiToken = await ethers.getContractAt("IERC20", adai, signer);
+    
+            const Q2T = await ethers.getContractFactory("Q2T", signer);
+            const q2tImp = Q2T.attach(q2t.address);
+    
+            await daiToken.approve(q2tImp.address, "600".concat(e18));
+            await q2tImp.deposit(1, "600".concat(e18), 50);
+
+            expect(String(await adaiToken.balanceOf(q2tImp.address)).slice(0,4)).to.equal("1000");
+            expect(await daiToken.balanceOf(q2tImp.address)).to.equal("600".concat(e18));
+        });
+        it("Should NOT have issued  newtreasury NFT for template 1 and used existing one", async function() {
+            const templatesTreasuriesAddress = await q2t.templatesTreasuries();
+            const templatesTreasuries = await ethers.getContractAt("TemplatesTreasuriesWithReserves", templatesTreasuriesAddress);
+            const templatesReapayersTreasuriesAddress = await q2t.templatesReapayersTreasuries();
+            const templatesReapayersTreasuries = await ethers.getContractAt("TemplatesTreasuries", templatesReapayersTreasuriesAddress);
+
+            expect(await templatesTreasuries.balanceOf(q2t.address, 1)).to.equal("1");
+            expect(await templatesTreasuries.balanceOf(q2t.address, 2)).to.equal("0");
+            expect(await templatesTreasuries.balanceOf(q2t.address, 3)).to.equal("0");
+            expect(String(await templatesTreasuries.getCurrentFund(1)).slice(0, 4)).to.equal("1000"); 
+            expect(await templatesTreasuries.getCurrentFund(2)).to.equal("0");
+            expect(await templatesTreasuries.getCurrentFund(3)).to.equal("0");
+           
+            expect(await templatesTreasuries.balanceOf(q2t.address, 4)).to.equal("0");
+            expect(await templatesTreasuries.balanceOf(q2t.address, 5)).to.equal("0");
+            expect(await templatesTreasuries.balanceOf(q2t.address, 6)).to.equal("0");
+            expect(await templatesTreasuries.getCurrentReserve(1)).to.equal("0");
+            expect(await templatesTreasuries.getCurrentReserve(2)).to.equal("0");
+            expect(await templatesTreasuries.getCurrentReserve(3)).to.equal("0");
+
+            expect(await templatesReapayersTreasuries.balanceOf(q2t.address, 1)).to.equal("1");
+            expect(await templatesReapayersTreasuries.balanceOf(q2t.address, 2)).to.equal("0");
+            expect(await templatesReapayersTreasuries.balanceOf(q2t.address, 3)).to.equal("0");
+            expect(await templatesReapayersTreasuries.getCurrentFund(1)).to.equal("600".concat(e18));
+            expect(await templatesReapayersTreasuries.getCurrentFund(2)).to.equal("0");
+            expect(await templatesReapayersTreasuries.getCurrentFund(3)).to.equal("0");
+        });
+        it("Should deposit DAI through Q2T dao to aave for template 3", async function() {
+            await hre.network.provider.request({
+                method: "hardhat_impersonateAccount",
+                params: [process.env.IMPERSONATE]
+            });
+    
+            signer = await ethers.provider.getSigner(process.env.IMPERSONATE);
+    
+            /*const Erc20 = await ethers.getContractFactory("ERC20", signer);
+            const daiToken = Erc20.attach(dai);
+            const adaiToken = Erc20.attach(adai);*/
+
+            const daiToken = await ethers.getContractAt("IERC20", dai, signer);
+            const adaiToken = await ethers.getContractAt("IERC20", adai, signer);
+    
+            const Q2T = await ethers.getContractFactory("Q2T", signer);
+            const q2tImp = Q2T.attach(q2t.address);
+    
+            await daiToken.approve(q2tImp.address, "100".concat(e18));
+            await q2tImp.deposit(3, "100".concat(e18), 30);
+    
+            expect(String(await adaiToken.balanceOf(q2tImp.address)).slice(0,4)).to.equal("1070");
+            expect(await daiToken.balanceOf(q2tImp.address)).to.equal("630".concat(e18));
+        });
+        it("Should have issued treasury NFT for template 3 and assigned funds to it", async function() {
+            const templatesTreasuriesAddress = await q2t.templatesTreasuries();
+            const templatesTreasuries = await ethers.getContractAt("TemplatesTreasuriesWithReserves", templatesTreasuriesAddress);
+            const templatesReapayersTreasuriesAddress = await q2t.templatesReapayersTreasuries();
+            const templatesReapayersTreasuries = await ethers.getContractAt("TemplatesTreasuries", templatesReapayersTreasuriesAddress);
+
+            expect(await templatesTreasuries.balanceOf(q2t.address, 1)).to.equal("1");
+            expect(await templatesTreasuries.balanceOf(q2t.address, 2)).to.equal("0");
+            expect(await templatesTreasuries.balanceOf(q2t.address, 3)).to.equal("1");
+            expect(String(await templatesTreasuries.getCurrentFund(1)).slice(0, 4)).to.equal("1000"); 
+            expect(await templatesTreasuries.getCurrentFund(2)).to.equal("0");
+            expect(String(await templatesTreasuries.getCurrentFund(3)).slice(0, 4)).to.equal("7000");
+           
+            expect(await templatesTreasuries.balanceOf(q2t.address, 4)).to.equal("0");
+            expect(await templatesTreasuries.balanceOf(q2t.address, 5)).to.equal("0");
+            expect(await templatesTreasuries.balanceOf(q2t.address, 6)).to.equal("0");
+            expect(await templatesTreasuries.getCurrentReserve(1)).to.equal("0");
+            expect(await templatesTreasuries.getCurrentReserve(2)).to.equal("0");
+            expect(await templatesTreasuries.getCurrentReserve(3)).to.equal("0");
+
+            expect(await templatesReapayersTreasuries.balanceOf(q2t.address, 1)).to.equal("1");
+            expect(await templatesReapayersTreasuries.balanceOf(q2t.address, 2)).to.equal("0");
+            expect(await templatesReapayersTreasuries.balanceOf(q2t.address, 3)).to.equal("1");
+            expect(await templatesReapayersTreasuries.getCurrentFund(1)).to.equal("600".concat(e18));
+            expect(await templatesReapayersTreasuries.getCurrentFund(2)).to.equal("0");
+            expect(await templatesReapayersTreasuries.getCurrentFund(3)).to.equal("30".concat(e18));
         });
         /*it("Should create gig (without project)", async function() {
             const [deployer] = await ethers.getSigners();

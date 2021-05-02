@@ -56,6 +56,12 @@ contract TemplatesTreasuriesWithReserves is TemplatesTreasuries {
     }
 
     function getCurrentReserve(DataTypes.Template _template) public view returns (uint256) {
-        return funds[getTemplateReservesTokenId(_template)][0];
+        uint8 reservesTokenId = getTemplateReservesTokenId(_template);
+
+        if (balanceOf(q2t, uint256(reservesTokenId)) == 0) {
+            return 0;
+        }
+
+        return funds[reservesTokenId][0];
     }
 }

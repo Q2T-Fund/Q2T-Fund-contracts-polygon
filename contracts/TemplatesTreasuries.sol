@@ -73,6 +73,10 @@ contract TemplatesTreasuries is ERC1155 {
     }
 
     function getCurrentFund(DataTypes.Template _template) public view returns (uint256) {
+        if (balanceOf(q2t, uint256(_template)) == 0) {
+            return 0;
+        }
+        
         return funds[uint8(_template)][funds[uint8(_template)].length - 1];
     }
 }

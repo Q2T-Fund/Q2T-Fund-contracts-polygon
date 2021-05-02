@@ -43,6 +43,7 @@ contract Q2T is ERC1155Holder {
     ILendingPoolAddressesProvider ledningPoolAP;
     address public templatesReapayersTreasuries;
     address public templatesTreasuries;
+    uint256 private aTokenLastBalance;
     uint256 public totalQ2TFund;
     uint256 public totalRepayerFund;
     mapping (address => mapping (address => uint256)) public repaymentAmounts;
@@ -107,12 +108,14 @@ contract Q2T is ERC1155Holder {
         ILendingPool lendingPool = ILendingPool(ledningPoolAP.getLendingPool());
 
         IERC20 aToken = IERC20(lendingPool.getReserveData(currencyAddress).aTokenAddress);
-        uint256 aTokenBalanceBefore = aToken.balanceOf(address(this));
+        uint256 aTokenBalance = aToken.balanceOf(address(this));
+        uint256 aTokenYeild = aTokenBalance.sub(aTokenLastBalance);
 
         currency.approve(address(lendingPool), q2tAmount);
         lendingPool.deposit(currencyAddress, q2tAmount, address(this), 0);
 
-        uint256 aTokenReceived = aToken.balanceOf(address(this)).sub(aTokenBalanceBefore);
+        aTokenLastBalance = aToken.balanceOf(address(this));
+        uint256 aTokenReceived = aTokenLastBalance.sub(aTokenBalance).add(aTokenYeild);
 
         if(TemplatesTreasuriesWithReserves(templatesTreasuries).balanceOf(address(this), uint256(_template)) == 0) {
             TemplatesTreasuriesWithReserves(templatesTreasuries).mint(_template, aTokenReceived);
