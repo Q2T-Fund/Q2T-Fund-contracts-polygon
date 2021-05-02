@@ -51,7 +51,7 @@ contract Q2T is ERC1155Holder {
     mapping (DataTypes.Template => address[]) public temapltesMilestones;
     mapping (address => DataTypes.Template) public milestonesTemplates;
     mapping (address => address) public milestonesTreasuries;
-    mapping (address => address) communitiesMilestones;
+    mapping (address => address) public communitiesMilestones;
 
     constructor(
         address _addressesProvider
