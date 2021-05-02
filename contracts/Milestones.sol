@@ -225,4 +225,8 @@ contract Milestones is IERC721Metadata, ERC721 {
         milestones[_milestoneId].status = MilestoneStatuses.MilestoneStatus.Completed;
         isValidated[_milestoneId] = false;
     }
+
+    function getCommunity() public view returns (address) {
+        return address(community);
+    }
 }

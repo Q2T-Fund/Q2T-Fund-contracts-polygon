@@ -36,7 +36,7 @@ async function main() {
   console.log("Deploying Q2T and Template Treasuries");
 
   const Q2T = await ethers.getContractFactory("Q2T");
-  const q2t = await Q2T.deploy(addressesProvider.address);
+  const q2t = await Q2T.deploy(addressesProvider.address, {gasLimit: 9500000});
   await q2t.deployed();
 
   console.log("Q2T address: ", q2t.address);

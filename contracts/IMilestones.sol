@@ -10,6 +10,7 @@ pragma experimental ABIEncoderV2;
  */
 
 interface IMilestones {
+    function getCommunity() external view returns (address);
     function projectsNum() external view returns (uint256);
     function popTotalCommunityContributions() external returns(uint256[] memory);
     function popContributionsPerProject(uint256 projectId) external returns(uint256[] memory);

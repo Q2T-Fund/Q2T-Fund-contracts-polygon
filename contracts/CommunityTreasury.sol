@@ -10,6 +10,7 @@ import "./ILendingPoolAddressesProvider.sol";
 import "./ILendingPool.sol";
 import "./ICreditDelegationToken.sol";
 import "./IMilestones.sol";
+import "./ICommunity.sol";
 import {DataTypes} from "./DataTypes.sol";
 
 import "./AddressesProvider.sol";
@@ -20,7 +21,7 @@ contract CommunityTreasury is Ownable {
     using SafeMath for uint256;
 
     event Borrowed(string _currency, uint256 _amount);
-    event Distributed(string _currency, uint256 _amount, address _project);
+    event Distributed(string _currency, uint256 _amount, uint256 projectId, address _projectAddress);
 
     bytes4 public constant IDENTITY = 0xf114c7dc;
 
@@ -29,8 +30,9 @@ contract CommunityTreasury is Ownable {
 
     address public addressesProvider;
     address public milestones;
+    address public community;
     address public q2t;
-    mapping (address => uint256) public projectAllocation;
+    mapping (uint256 => uint256) public projectAllocation;
     mapping (uint256 => address) public projects;
     mapping (address => mapping (address => uint256)) public funds;
     mapping (address => uint256) public totalFunded;
@@ -41,21 +43,24 @@ contract CommunityTreasury is Ownable {
         address _addressesProvider 
     ) {
         milestones = _milestones;
+        community = IMilestones(_milestones).getCommunity();
         q2t = _q2t;
         addressesProvider = _addressesProvider;
     }
 
-    function sendAllocation(uint256 _amount, address _project) public {
-        require(projectAllocation[_project] >= _amount, "< allocation");
+    function redeemAllocation(uint256 _amount, uint256 _projectId) public {
+        require(projectAllocation[_projectId] >= _amount, "< allocation");
 
         IERC20 asset = IERC20(AddressesProvider(addressesProvider).currenciesAddresses("USDC"));  
 
         require(asset.balanceOf(address(this)) >= _amount, "< balance");
 
-        projectAllocation[_project] = projectAllocation[_project].sub(_amount);
-        asset.transfer(_project, _amount);
+        projectAllocation[_projectId] = projectAllocation[_projectId].sub(_amount);
 
-        emit Distributed("USDC", _amount, _project);
+        address projectTreasury = ICommunity(community).getProjectTreasuryAddress(_projectId);
+        asset.transfer(projectTreasury, _amount);
+
+        emit Distributed("USDC", _amount, _projectId, projectTreasury);
     }
 
     function allocateDelegated() public {
@@ -93,7 +98,7 @@ contract CommunityTreasury is Ownable {
 
         //distribute funds
         for (uint i = 0; i < contributedProjects.length; i++) {
-            projectAllocation[projects[contributedProjects[i]]] = projectAllocation[projects[contributedProjects[i]]].add(weighted[i]);
+            projectAllocation[contributedProjects[i]] = projectAllocation[contributedProjects[i]].add(weighted[i]);
         }
     }
 }

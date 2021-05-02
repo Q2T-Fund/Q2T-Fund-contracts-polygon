@@ -38,4 +38,6 @@ interface ICommunity {
     function transferToTreasury(uint256 amount) external;
 
     function getTreasuryBalance() external view returns (uint256);
+
+    function getProjectTreasuryAddress(uint256 projectId) external view returns(address);
 }

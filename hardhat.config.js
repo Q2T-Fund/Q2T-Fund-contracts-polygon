@@ -24,6 +24,7 @@ module.exports = {
     maticTestnet: {
       url: 'https://rpc-mumbai.maticvigil.com/',
       gasPrice: 1000000000,
+      gas: 9500000,
       accounts: [process.env.PRIVATE_KEY]
     },
     kovan: {
