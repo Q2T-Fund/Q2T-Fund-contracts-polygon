@@ -17,6 +17,7 @@ let timelock;
 let gigValidator;
 let ditoTokenFactory;
 let communityTreasuryFactory;
+let milestonesFactory;
 let communitiesRegistry;
 let gigsRegistryFactory;
 
@@ -47,30 +48,25 @@ describe("Deposit and borrow happy flow", function() {
     
             expect(gigValidator.address).not.to.be.undefined;
         });*/
-        /*it("Should deploy contract factories", async function() {
-            const DITOTokenFactory = await ethers.getContractFactory("DITOTokenFactory");
-            ditoTokenFactory = await DITOTokenFactory.deploy();
-            await ditoTokenFactory.deployed();
-
+        it("Should deploy contract factories", async function() {
             const CommunityTreasuryFactory = await ethers.getContractFactory("CommunityTreasuryFactory");
             communityTreasuryFactory = await CommunityTreasuryFactory.deploy();
             await communityTreasuryFactory.deployed();
+            
+            const MilestonesFactory = await ethers.getContractFactory("MilestonesFactory");
+            milestonesFactory = await MilestonesFactory.deploy();
+            await milestonesFactory.deployed();
 
-            const GigsRegistryFactory = await ethers.getContractFactory("GigsRegistryFactory");
-            gigsRegistryFactory = await GigsRegistryFactory.deploy();
-            await gigsRegistryFactory.deployed();
-
-            expect(ditoTokenFactory.address).not.to.be.undefined;
+            expect(milestonesFactory.address).not.to.be.undefined;
             expect(communityTreasuryFactory.address).not.to.be.undefined;
-            expect(gigsRegistryFactory.address).not.to.be.undefined;
-        });*/
+        });
         it("Should deploy addresses provider and communities registry", async function() {
             const AddressesProvider = await ethers.getContractFactory("AddressesProvider");
             addressesProvider = await AddressesProvider.deploy(
                 dai,
                 usdc,
-                //communityTreasuryFactory.address,
-                //ditoTokenFactory.address,
+                communityTreasuryFactory.address,
+                milestonesFactory.address,
                 //gigsRegistryFactory.address,
                 //gigValidator.address,
                 landingPoolAP,

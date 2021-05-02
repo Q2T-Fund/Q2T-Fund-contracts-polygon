@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "./ICommunity.sol";
 import "./IProjects.sol";
 import "./MilestoneStatuses.sol";
+import "./IQ2TTrigger.sol";
 
 // TODO: figure out rates.
 // TODO: transfer tokens.
@@ -24,6 +25,7 @@ contract Milestones is IERC721Metadata, ERC721 {
         bool transferedCredits,
         uint256 creditsTransfered
     );
+    event DistributionTriggered(uint256 _milestoneId, uint256 _projectId);
 
     Counters.Counter milestoneId;
 
@@ -57,6 +59,7 @@ contract Milestones is IERC721Metadata, ERC721 {
         community = ICommunity(_communityAddress);
         projects = IProjects(_projects);
         q2t = msg.sender;
+        distributionInProgress = false;
     }
 
     function setQ2T(address _q2t) public {
@@ -160,8 +163,10 @@ contract Milestones is IERC721Metadata, ERC721 {
                 contributionsPerProject[milestone.projectId].push(milestone.ditoCredits);
                 totalContributions.push(milestone.ditoCredits);
             } else {
-                delete contributionsPerProject[milestone.projectId];
-                delete totalContributions;
+                IQ2TTrigger(q2t).thresholdReached();
+                distributionInProgress = true;
+
+                emit DistributionTriggered(_milestoneId, milestone.projectId);
             }
             emit MilestoneValidated(
                 _milestoneId,
@@ -190,13 +195,16 @@ contract Milestones is IERC721Metadata, ERC721 {
         return contributions;
     }
 
-    function projectsNum() public view returns (uint256) {
-        return contributedProjects.length;
-    }
-
-    function finishDistribution() public {
+    function popContributedProjects() public returns (uint256[] memory) {
+        uint256[] memory prjcts = contributedProjects;
         delete contributedProjects;
         distributionInProgress = false;
+
+        return prjcts;
+    }
+
+    function projectsNum() public view returns (uint256) {
+        return contributedProjects.length;
     }
 
     function _changeStatus(

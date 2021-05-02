@@ -7,6 +7,7 @@ import "./TemplatesTreasuriesWithReserves.sol";
 import "./DataTypes.sol";
 import "./IMilestones.sol";
 import "./MilestonesFactory.sol";
+import "./CommunityTreasuryFactory.sol";
 import "./QuadraticDistribution.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
@@ -61,14 +62,21 @@ contract Q2T is ERC1155Holder {
     }
 
     function deployMilestones(DataTypes.Template _template, address _communityAddress, address _projects) public {
-        temapltesMilestones[_template].push(
-            MilestonesFactory(AddressesProvider(
-                addressesProvider).milestonesFactory()
-            ).deployMilestones(
-                _communityAddress, 
-                _projects
-            )
+        address newMilestones = MilestonesFactory(AddressesProvider(
+            addressesProvider).milestonesFactory()
+        ).deployMilestones(
+            _communityAddress, 
+            _projects
         );
+
+        temapltesMilestones[_template].push(newMilestones);
+        milestonesTemplates[newMilestones] = _template;
+        //deploy treasury
+        address newTreasury = CommunityTreasuryFactory(AddressesProvider(
+            addressesProvider).communityTreasuryFactory()
+        ).deployTreasury(address(this), newMilestones, addressesProvider);
+
+        milestonesTreasuries[newMilestones] = newTreasury;
     }
 
     function deposit(DataTypes.Template _template, uint256 _amount, uint256 _repayment) public {
@@ -179,7 +187,7 @@ contract Q2T is ERC1155Holder {
             //check if community has contributed projects
             projectsNum = currMilestones.projectsNum();
             if (projectsNum > 0) {
-                unweigted[n] = QuadraticDistribution.calcUnweightedAlloc(currMilestones.getAllContributions());
+                unweigted[n] = QuadraticDistribution.calcUnweightedAlloc(currMilestones.popTotalCommunityContributions());
                 n++;
                 contributedNum++;
                 didContribute[i] = true;
