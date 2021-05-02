@@ -225,4 +225,8 @@ contract Milestones is IERC721Metadata, ERC721 {
     function getCommunity() public view returns (address) {
         return address(community);
     }
+
+    function getProjectMilestones(uint256 _projectId) public view returns (uint256[] memory) {
+        return projectMilestones[_projectId];
+    }
 }
