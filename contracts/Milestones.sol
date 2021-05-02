@@ -114,7 +114,7 @@ contract Milestones is IERC721Metadata, ERC721 {
             "The taker should be a community member."
         );
 
-        _changeStatus(_milestoneId, milestones[_milestoneId].status, MilestoneStatuses.MilestoneStatus.Taken);
+        _changeStatus(_milestoneId, MilestoneStatuses.MilestoneStatus.Taken);
 
         milestones[_milestoneId].taker = taker;
 
@@ -127,7 +127,7 @@ contract Milestones is IERC721Metadata, ERC721 {
             "Only the taker can submit the gig!"
         );
 
-        _changeStatus(_milestoneId, milestones[_milestoneId].status, MilestoneStatuses.MilestoneStatus.Submitted);
+        _changeStatus(_milestoneId, MilestoneStatuses.MilestoneStatus.Submitted);
 
         emit MilestoneSubmitted(_milestoneId);
     }
@@ -140,7 +140,7 @@ contract Milestones is IERC721Metadata, ERC721 {
             "Can be complete only by the creator."
         );
 
-        _changeStatus(_milestoneId, milestones[_milestoneId].status, MilestoneStatuses.MilestoneStatus.Completed);
+        _changeStatus(_milestoneId, MilestoneStatuses.MilestoneStatus.Completed);
 
         emit MilestoneCompleted(_milestoneId);
     }
@@ -206,11 +206,10 @@ contract Milestones is IERC721Metadata, ERC721 {
 
     function _changeStatus(
         uint256 _milestoneId,
-        MilestoneStatuses.MilestoneStatus _from, 
         MilestoneStatuses.MilestoneStatus _to
     ) private {
         require (
-            MilestoneStatuses.isTransitionAllowed(_from, _to), 
+            MilestoneStatuses.isTransitionAllowed(milestones[_milestoneId].status, _to), 
             "Status change not allowed"
         );
 
@@ -219,7 +218,7 @@ contract Milestones is IERC721Metadata, ERC721 {
             "Milestone creation not yet validated."
         );
 
-        milestones[_milestoneId].status = MilestoneStatuses.MilestoneStatus.Completed;
+        milestones[_milestoneId].status = _to;
         isValidated[_milestoneId] = false;
     }
 
