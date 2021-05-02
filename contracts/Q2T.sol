@@ -33,6 +33,11 @@ contract Q2T is ERC1155Holder {
         address _currency, 
         uint256 _amount
     );
+    event MilestonesDeployed(
+        DataTypes.Template _template,
+        address _milestones,
+        address _communityTreasury
+    );
 
     address public addressesProvider;
     ILendingPoolAddressesProvider ledningPoolAP;
@@ -62,6 +67,7 @@ contract Q2T is ERC1155Holder {
     }
 
     function deployMilestones(DataTypes.Template _template, address _communityAddress, address _projects) public {
+        require (_template != DataTypes.Template.NONE, "Template not specified");
         address newMilestones = MilestonesFactory(AddressesProvider(
             addressesProvider).milestonesFactory()
         ).deployMilestones(
@@ -77,9 +83,13 @@ contract Q2T is ERC1155Holder {
         ).deployTreasury(address(this), newMilestones, addressesProvider);
 
         milestonesTreasuries[newMilestones] = newTreasury;
+
+        emit MilestonesDeployed(_template, newMilestones, newTreasury);
     }
 
     function deposit(DataTypes.Template _template, uint256 _amount, uint256 _repayment) public {
+        require (_template != DataTypes.Template.NONE, "Template not specified");
+
         address currencyAddress = AddressesProvider(addressesProvider).currenciesAddresses("DAI");
         
         IERC20 currency = IERC20(currencyAddress);

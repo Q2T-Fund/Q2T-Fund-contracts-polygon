@@ -21,6 +21,11 @@ module.exports = {
       gasPrice: 1000000000,
       accounts: [process.env.PRIVATE_KEY]
     },
+    maticTestnet: {
+      url: 'https://rpc-mumbai.maticvigil.com/',
+      gasPrice: 1000000000,
+      accounts: [process.env.PRIVATE_KEY]
+    },
     kovan: {
       chainId: 42,
       url: process.env.PROVIDER_URL_KOVAN,

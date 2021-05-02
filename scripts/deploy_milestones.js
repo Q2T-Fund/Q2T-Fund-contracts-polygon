@@ -11,6 +11,28 @@ async function main() {
   const [deployer] = await ethers.getSigners();
   //const Token = await ethers.getContractFactory("DITOToken");
 
+  const milestoneTemplate = process.env.TEMPLATE;
+  const q2tAddress = process.env.Q2T;
+  const communityAddress = process.env.COMMUNITY;
+  const projectsAddress = process.env.PROJECTS;
+
+  if (!milestoneTemplate || milestoneTemplate < 1 || milestoneTemplate > 3) {
+    console.log("Please provide valid template (1, 2 or 3) by setting TEMPLATE env variable");
+    process.exit(0);
+  };
+  if (!q2tAddress) {
+    console.log("Please provide Q2T address by setting Q2T env variable");
+    process.exit(0);
+  };
+  if (!communityAddress) {
+    console.log("Please provide Community address by setting COMMUNITY env variable");
+    process.exit(0);
+  };
+  if (!projectsAddress) {
+    console.log("Please provide Projects address by setting PROJECTS env variable");
+    process.exit(0);
+  };
+
   console.log("Deploying to network: ", network);
 
   console.log(
@@ -22,79 +44,31 @@ async function main() {
   
   console.log("Account balance:", (await deployer.getBalance()).toString());
   console.log("----------------------------");
-  console.log("Deploying prerequisites");
 
-  //const gigValidatorAddress = await deployOracle();
-  const { communityTreasuryFactoryAddr, milestonesFactory } = await deployFactories();
-  const addressesProviderAddress = await deployAddressesProvider(
-    communityTreasuryFactoryAddr,
-    milestonesFactory
-  );
-  const addressesProvider = await ethers.getContractAt("AddressesProvider", addressesProviderAddress);
-
-  console.log("----------------------------");
-  console.log("Deploying Q2T and Template Treasuries");
-
-  const Q2T = await ethers.getContractFactory("Q2T");
-  const q2t = await Q2T.deploy(addressesProvider.address);
-  await q2t.deployed();
-
-  console.log("Q2T address: ", q2t.address);
-
-  const templatesTreasuriesAddress = await q2t.templatesTreasuries();
-  const templatesReapayersTreasuriesAddress = await q2t.templatesReapayersTreasuries();
-
-  console.log("Templates Treasuries address: ", templatesTreasuriesAddress);
-  console.log("Templates Reapayers Treasuries address: ", templatesReapayersTreasuriesAddress);
+  console.log("About to create new Milestones and community treasury using Q2T: ", q2tAddress); 
+  console.log("Using Template: ", milestoneTemplate);
+  console.log("Using Community at address: ", communityAddress);
+  console.log("Using Projects at address: ", projectsAddress);
+  await rl.question("Are you sure?", async function(answer) {
+    if(answer != "y") {
+      process.exit(0);
+    }
+  });
   
   console.log("----------------------------");
-  console.log("Deploying one Milestones and community treasury per each template");
+  console.log("Deploying one Milestones and community treasury");
 
-  let milestonesAddresses = [];
-  let communityTreasuriesAddresses = [];
+  const createMilestonesTx = await q2t.deployMilestones(i, address0, address0);
 
-  for (let i = 1; i <= 3; i++) {
-    const createMilestonesTx = await q2t.deployMilestones(i, address0, address0);
-
-    const events = (await createMilestonesTx.wait()).events?.filter((e) => {
-      return e.event == "MilestonesDeployed"
+  const events = (await createMilestonesTx.wait()).events?.filter((e) => {
+    return e.event == "MilestonesDeployed"
   });
 
-    milestonesAddresses.push(events[0].args._milestones);
-    communityTreasuriesAddresses.push(await q2t.milestonesTreasuries(milestonesAddresses[i - 1]));
+  const milestonesAddress = events[0].args._milestones;
+  const communityTreasuriesAddress = await q2t.milestonesTreasuries(milestonesAddress);
 
-    console.log("Template ", i, ", Milestones address: ", milestonesAddresses[i - 1]);
-    console.log("              Treasury address: ", communityTreasuriesAddresses[i - 1]);
-  }
-
-  if (network == "kovan") {
-    console.log("Verifying contracts with etherscan...");
-    
-    await hre.run("verify:verify", {
-      address: community.address,
-      constructorArguments: [template, dai, usdc, landingPoolAP, forwarder_address,],
-    });
-
-    await hre.run("verify:verify", {
-      address: communityTreasury.address,
-      constructorArguments: [template, token.address, deployer.address, dai, usdc, landingPoolAP,],
-    });
-
-    await hre.run("verify:verify", {
-      address: token.address,
-      constructorArguments: ["96000000000000000000000",],
-    });
-
-    await hre.run("verify:verify", {
-      address: gigsRegistry.address,
-      constructorArguments: [community.address, "community1", gigValidatorAddress,],
-    });
-
-    await hre.run("verify:verify", {
-      address: treasuryDAO.address,
-      constructorArguments: [template, addresses[network].aaveDataProvider, dai, usdc,],
-    });
-  }
+  console.log("Template ", i, ", Milestones address: ", milestonesAddress);
+  console.log("              Treasury address: ", communityTreasuriesAddress);
 }
 
 async function deployOracle() {

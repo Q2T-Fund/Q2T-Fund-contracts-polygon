@@ -50,7 +50,7 @@ contract TemplatesTreasuriesWithReserves is TemplatesTreasuries {
     }
 
     function getTemplateReservesTokenId(DataTypes.Template _template) public pure returns (uint8) {
-        uint8[3] memory templateReservesIds = [3, 4, 5];
+        uint8[4] memory templateReservesIds = [0, 4, 5, 6];
 
         return templateReservesIds[uint256(_template)];
     }

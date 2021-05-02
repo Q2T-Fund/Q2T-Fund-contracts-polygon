@@ -46,26 +46,6 @@ async function main() {
 
   console.log("Templates Treasuries address: ", templatesTreasuriesAddress);
   console.log("Templates Reapayers Treasuries address: ", templatesReapayersTreasuriesAddress);
-  
-  console.log("----------------------------");
-  console.log("Deploying one Milestones and community treasury per each template");
-
-  let milestonesAddresses = [];
-  let communityTreasuriesAddresses = [];
-
-  for (let i = 1; i <= 3; i++) {
-    const createMilestonesTx = await q2t.deployMilestones(i, address0, address0);
-
-    const events = (await createMilestonesTx.wait()).events?.filter((e) => {
-      return e.event == "MilestonesDeployed"
-  });
-
-    milestonesAddresses.push(events[0].args._milestones);
-    communityTreasuriesAddresses.push(await q2t.milestonesTreasuries(milestonesAddresses[i - 1]));
-
-    console.log("Template ", i, ", Milestones address: ", milestonesAddresses[i - 1]);
-    console.log("              Treasury address: ", communityTreasuriesAddresses[i - 1]);
-  }
 
   if (network == "kovan") {
     console.log("Verifying contracts with etherscan...");

@@ -84,7 +84,7 @@ describe("Deposit and borrow happy flow", function() {
         it("Should deploy Q2T contract", async function() {
             const Q2T = await ethers.getContractFactory("Q2T");
             q2t = await Q2T.deploy(addressesProvider.address);
-            await q2t.deployed;
+            await q2t.deployed();
             
             expect(q2t.address).not.to.be.undefined;
         });
