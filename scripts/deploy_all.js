@@ -58,7 +58,7 @@ async function main() {
 
     const events = (await createMilestonesTx.wait()).events?.filter((e) => {
       return e.event == "MilestonesDeployed"
-  });
+    });
 
     milestonesAddresses.push(events[0].args._milestones);
     communityTreasuriesAddresses.push(await q2t.milestonesTreasuries(milestonesAddresses[i - 1]));

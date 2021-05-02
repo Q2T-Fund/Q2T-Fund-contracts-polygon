@@ -68,26 +68,30 @@ contract Q2T is ERC1155Holder {
         templatesReapayersTreasuries = address(templatesReapayersTreasuriesContract);
     }
 
-    function deployMilestones(DataTypes.Template _template, address _communityAddress) public {
+    function deployMilestones(DataTypes.Template _template, address _communityAddress) public returns (address) {
         require (communitiesMilestones[_communityAddress] == address(0), "Milestones already deployed");
         require (_template != DataTypes.Template.NONE, "Template not specified");
+
         address newMilestones = MilestonesFactory(AddressesProvider(
-            addressesProvider).milestonesFactory()
-        ).deployMilestones(
-            _communityAddress
-        );
+            addressesProvider).milestonesFactory()).deployMilestones(
+                _communityAddress
+            );
 
         temapltesMilestones[_template].push(newMilestones);
         milestonesTemplates[newMilestones] = _template;
+
         //deploy treasury
         address newTreasury = CommunityTreasuryFactory(AddressesProvider(
-            addressesProvider).communityTreasuryFactory()
-        ).deployTreasury(address(this), newMilestones, addressesProvider);
+            addressesProvider).communityTreasuryFactory()).deployTreasury(
+                address(this), newMilestones, addressesProvider
+            );
 
         milestonesTreasuries[newMilestones] = newTreasury;
         communitiesMilestones[_communityAddress] = newMilestones;
 
         emit MilestonesDeployed(_template, newMilestones, newTreasury);
+
+        return newMilestones;
     }
 
     function deposit(DataTypes.Template _template, uint256 _amount, uint256 _repayment) public {
@@ -174,6 +178,10 @@ contract Q2T is ERC1155Holder {
         _distribute(milestonesTemplate, totalDeligating);
 
         emit ThresholdReached(milestonesTemplate, msg.sender);
+    }
+
+    function getMilestonesPerTemplate(DataTypes.Template _template) public view returns (uint256) {
+        return temapltesMilestones[_template].length;
     }
 
     function _delegate (address _treasury, address _currency, uint256 _amount) internal {

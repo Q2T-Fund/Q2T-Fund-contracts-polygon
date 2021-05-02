@@ -16,15 +16,22 @@ let gigsRegistry;
 let timelock;
 let gigValidator;
 let ditoTokenFactory;
+let milestones;
 let communityTreasuryFactory;
 let milestonesFactory;
-let communitiesRegistry;
-let gigsRegistryFactory;
-
+let communityMocks = [];
 let q2t;
 let templatesTreasuries;
 let templatesReapayersTreasuries;
 let addressesProvider;
+
+const memberAccount1 = {
+    address: "0x1111111111111111111111111111111111111111"
+};
+const memberAccount2 = {
+    address: "0x2222222222222222222222222222222222222222"
+};
+const projectIds = [0];
 
 const forwarder_address = addresses[network].forwarder;
 const dai = addresses[network].dai;
@@ -73,19 +80,13 @@ describe("Deposit and borrow happy flow", function() {
             addressesProvider = await AddressesProvider.deploy(
                 dai,
                 usdc,
-                communityTreasuryFactory.address,
                 milestonesFactory.address,
-                //gigsRegistryFactory.address,
-                //gigValidator.address,
+                communityTreasuryFactory.address,
                 landingPoolAP,
             );
             await addressesProvider.deployed();
 
             expect(addressesProvider.address).not.to.be.undefined;
-            //expect(await addressesProvider.communitiesRegistry()).not.to.equal("0x0000000000000000000000000000000000000000");
-            //expect(await addressesProvider.communityTreasuryFactory()).to.equal(communityTreasuryFactory.address);
-            //expect(await addressesProvider.ditoTokenFactory()).to.equal(ditoTokenFactory.address);
-            //expect(await addressesProvider.oracle()).to.equal(gigValidator.address);
             expect((await addressesProvider.currenciesAddresses("DAI")).toLowerCase()).to.equal(dai);
             expect((await addressesProvider.currenciesAddresses("USDC")).toLowerCase()).to.equal(usdc);
         });
@@ -105,77 +106,78 @@ describe("Deposit and borrow happy flow", function() {
             expect(templatesTreasuries).not.to.equal(templatesReapayersTreasuries);
 
         });
-        /*it("Should add treasury dao to communities registry", async function() {
-            communitiesRegistry = await ethers.getContractAt(
-                "CommunitiesRegistry", 
-                await addressesProvider.communitiesRegistry()
-            );
-
-            await communitiesRegistry.setDao(0, treasuryDAO.address, false);
-
-            expect(await communitiesRegistry.daos(0)).to.equal(treasuryDAO.address);
-            expect(await communitiesRegistry.daos(1)).to.equal("0x0000000000000000000000000000000000000000");
-            expect(await communitiesRegistry.daos(2)).to.equal("0x0000000000000000000000000000000000000000");
-        });*/
     });
-    /*describe("Community creation", function () {
-        it("Should create new community", async function() {
-            await communitiesRegistry.createCommunity(0);
+    describe("Milestones contract creation", function () {
+        before(async function() {
+            //deploy some mock communities
+            const CommunityMock =  await ethers.getContractFactory("CommunityMock");
+            for (let i = 0; i < 3 ; i++) {
+                const communityMock = await CommunityMock.deploy();
+                await communityMock.deployed();
 
-            expect(await communitiesRegistry.communities(0,0)).not.to.equal("0x0000000000000000000000000000000000000000");
-            expect(await communitiesRegistry.getCommunitiesNumber(0)).to.equal(1);
-            expect(await communitiesRegistry.getCommunitiesNumber(1)).to.equal(0);
-            expect(await communitiesRegistry.getCommunitiesNumber(2)).to.equal(0);
+                communityMocks.push(communityMock.address);
+            }
         });
-        it("Should have created token with community", async function() {
-            community = await ethers.getContractAt("Community", await communitiesRegistry.communities(0,0));
-            token = await ethers.getContractAt("DITOToken", await community.tokens());
+        it("Should deploy new milestones and community treasury", async function() {
+            const createMilestonesTx = await q2t.deployMilestones(1, communityMocks[0]);
+            const events = (await createMilestonesTx.wait()).events?.filter((e) => {
+                return e.event == "MilestonesDeployed"
+            });
+          
+            milestones = await ethers.getContractAt("Milestones", events[0].args._milestones);
 
-            expect(await token.owner()).to.equal(community.address);
-            expect(await token.balanceOf(community.address)).to.equal("96000".concat(e18));
-        });
-        it("Should create community treasury", async function() {
-            await communitiesRegistry.addCommunityTreasury(community.address);
-            communityTreasury = await ethers.getContractAt("CommunityTreasury", await community.communityTreasury());
-            
-            expect(await communityTreasury.owner()).to.equal(community.address);
-            expect(await token.balanceOf(communityTreasury.address)).to.equal("2000".concat(e18));
-            expect(await token.balanceOf(community.address)).to.equal("94000".concat(e18));
-        });
-        it("Should have linked community with dao", async function() {
-            expect(await communityTreasury.id()).to.equal("0");
-            expect(await treasuryDAO.nextId()).to.equal("1");
-            expect(await communityTreasury.dao()).to.equal(treasuryDAO.address);
-            expect(await treasuryDAO.communityTreasuries(0)).to.equal(communityTreasury.address);
-        });
-        it("Should deploy and link gig registry", async function() {
-            //const GigsRegistry = await ethers.getContractFactory("GigsRegistry");
-            //gigsRegistry = await GigsRegistry.deploy(community.address, "community1", gigValidator.address);
-            //await gigsRegistry.deployed();
-    
-            await community.addGigsRegistry("community1");
-            gigsRegistry = await ethers.getContractAt("GigsRegistry", await community.gigsRegistry());
-            await gigsRegistry.enableOracle(false); //to ignore oracle for tests
-    
-            expect(gigsRegistry.address).not.to.be.undefined;
-            expect(gigsRegistry.address).not.to.equal("0x0000000000000000000000000000000000000000");
-            expect(await gigsRegistry.community()).to.equal(community.address);
-            expect(await community.gigsRegistry()).to.equal(gigsRegistry.address);
-        });
-        it("Should allow to create another community", async function() {
-            await communitiesRegistry.createCommunity(0);
+            expect(await q2t.milestonesTreasuries(milestones.address)).not.to.equal("0x0000000000000000000000000000000000000000");
+            expect(await q2t.temapltesMilestones(1, 0)).to.equal(milestones.address);
+            expect(await q2t.communitiesMilestones(communityMocks[0])).to.equal(milestones.address);
 
-            expect(await communitiesRegistry.communities(0,1)).not.to.equal("0x0000000000000000000000000000000000000000");
-            expect(await communitiesRegistry.getCommunitiesNumber(0)).to.equal(2);
-            expect(await communitiesRegistry.communities(0,1)).not.to.equal(await communitiesRegistry.communities(0,0));
+            expect(await q2t.getMilestonesPerTemplate(1)).to.equal("1");
+            expect(await q2t.getMilestonesPerTemplate(2)).to.equal("0");
+            expect(await q2t.getMilestonesPerTemplate(3)).to.equal("0");
         });
-        it("Should not allow to create community without deployed dao", async function() {
-            expect(communitiesRegistry.createCommunity(1)).to.be.revertedWith("dao not set");;
+        it("Should not allow to deploy more than one milestones contract per community", async function() {
+            expect(q2t.deployMilestones(1, communityMocks[0])).to.be.revertedWith("Milestones already deployed");
         });
-    });*/
+        it("Should not allow to deploy milestone with template 0 (NONE)", async function() {
+            expect(q2t.deployMilestones(0, communityMocks[1])).to.be.revertedWith("Template not specified");
+        });
+        it("Should deploy more than one milestones contract treasury for the same template", async function() {
+            const createMilestonesTx = await q2t.deployMilestones(1, communityMocks[1]);
+            const events = (await createMilestonesTx.wait()).events?.filter((e) => {
+                return e.event == "MilestonesDeployed"
+            });
+
+            const milestones2 = events[0].args._milestones;
+
+            expect(await q2t.temapltesMilestones(1, 1)).to.equal(milestones2);
+            expect(await q2t.temapltesMilestones(1, 0)).to.equal(milestones.address);
+            expect(await q2t.communitiesMilestones(communityMocks[1])).to.equal(milestones2);
+
+            expect(await q2t.getMilestonesPerTemplate(1)).to.equal("2");
+            expect(await q2t.getMilestonesPerTemplate(2)).to.equal("0");
+            expect(await q2t.getMilestonesPerTemplate(3)).to.equal("0");
+        });
+        it("Should deploy milestones contract treasury for another template", async function() {
+            const createMilestonesTx = await q2t.deployMilestones(3, communityMocks[2]);
+
+            const events = (await createMilestonesTx.wait()).events?.filter((e) => {
+                return e.event == "MilestonesDeployed"
+            });
+
+            const milestones2 = events[0].args._milestones;
+
+            expect(await q2t.temapltesMilestones(3, 0)).to.equal(milestones2);
+            expect(await q2t.temapltesMilestones(1, 0)).to.equal(milestones.address);
+            expect(await q2t.communitiesMilestones(communityMocks[2])).to.equal(milestones2);
+
+            expect(await q2t.getMilestonesPerTemplate(1)).to.equal("2");
+            expect(await q2t.getMilestonesPerTemplate(2)).to.equal("0");
+            expect(await q2t.getMilestonesPerTemplate(3)).to.equal("1");
+        });
+    });
     describe("Basic flow", function() {
         before(async function() {
-            const [ , sender ]  = await ethers.getSigners(); //need to send some gas funds to impersonated acc
+            //need to send some gas funds to impersonated acc
+            const [ , sender ]  = await ethers.getSigners(); 
             await sender.sendTransaction({
                 to: process.env.IMPERSONATE, 
                 value: ethers.utils.parseEther("10.0")
@@ -334,113 +336,162 @@ describe("Deposit and borrow happy flow", function() {
             expect(await templatesReapayersTreasuries.getCurrentFund(2)).to.equal("0");
             expect(await templatesReapayersTreasuries.getCurrentFund(3)).to.equal("30".concat(e18));
         });
-        /*it("Should create gig (without project)", async function() {
-            const [deployer] = await ethers.getSigners();
-            const gigHash = gigHashIncompl.concat("0");
-    
-            await gigsRegistry.createGig(gigHash, "community1");
-            await gigsRegistry.confirmGig(gigHash);
-            const [id, isFound] = await gigsRegistry.gigIdLookup(deployer.address, gigHash);
-            
-            expect(await gigsRegistry.nextId()).to.equal("1");
-            expect(String(id)).to.equal("0");
-            expect(isFound).to.equal(true);
-        });
-        it("Should create milestone and link it to project", async function() {
-            const [deployer] = await ethers.getSigners();
-            const gigHash = gigHashIncompl.concat("1");
-    
-            await gigsRegistry.createMilestone(gigHash, gigProject);
-            const [id, isFound] = await gigsRegistry.gigIdLookup(deployer.address, gigHash);
-            
-            expect(await gigsRegistry.nextId()).to.equal("2");
-            expect(String(id)).to.equal("1");
-            expect(isFound).to.equal(true);
-            expect(await gigsRegistry.gigProjects("1")).to.equal(gigProject);
-        });
-        it("Should return false when no gig found by lookup", async function() {
-            const [deployer] = await ethers.getSigners();
-            const gigHash = gigHashIncompl.concat("3");
-            const [id, isFound] = await gigsRegistry.gigIdLookup(deployer.address, gigHash);
-    
-            expect(String(id)).to.equal("0");
-            expect(isFound).to.equal(false);
-        });
-        it("Should not allow complete gig that is not taken", async function() {
-            const [deployer] = await ethers.getSigners();
-            const gigHash = gigHashIncompl.concat("1");
-            expect(gigsRegistry.completeGig(1, deployer.address, gigHash, 1000)).to.be.revertedWith("wrong gig status");
-        });
-        it("Should allow to take a gig", async function() {
-            await gigsRegistry.takeGig(1);
-    
-            expect((await gigsRegistry.gigs(1))["status"]).to.equal(2);
-        })
-        it("Should send DITO tokens from community to treasury upon gig completion", async function() {
-            const [deployer] = await ethers.getSigners();
-            const gigHash = gigHashIncompl.concat("1");
-            await gigsRegistry.completeGig(1, deployer.address, gigHash, 1000);
-    
-            expect(await token.balanceOf(communityTreasury.address)).to.equal("3000".concat(e18));
-            expect(await token.balanceOf(community.address)).to.equal("93000".concat(e18));
-        });
-        it("Should not allow complete already completed gig", async function() {
-            const [deployer] = await ethers.getSigners();
-            const gigHash = gigHashIncompl.concat("1");
-            expect(gigsRegistry.completeGig(1, deployer.address, gigHash, 1000)).to.be.revertedWith("wrong gig status");
-        });
-        it("Shoud send tokens back once theshold reached", async function() {
-            const [deployer] = await ethers.getSigners();
-            const gigHash = gigHashIncompl.concat("4");
-    
-            await gigsRegistry.createMilestone(gigHash, gigProject);
-            const [id, ] = await gigsRegistry.gigIdLookup(deployer.address, gigHash);
-            await gigsRegistry.takeGig(id);
-            await gigsRegistry.completeGig(id, deployer.address, gigHash, 1000);
-    
-            expect(await token.balanceOf(communityTreasury.address)).to.equal("2000".concat(e18));
-            expect(await token.balanceOf(community.address)).to.equal("94000".concat(e18));
-        });
-        it("Shoud trigger credit delegation once DITO theshold reached", async function() {
-            //Threshold was reached in previos test. This one just checks the delegation
-            //const stableDebtDaiToken = await ethers.getContractAt("ICreditDelegationToken", stableDebtDai);
-            const debtUsdcToken = await ethers.getContractAt("ICreditDelegationToken", variableDebtUsdc);
-    
-            //expect(await stableDebtDaiToken.borrowAllowance(treasuryDAO.address, communityTreasury.address)).to.equal(MAX_UINT);
-            expect(await debtUsdcToken.borrowAllowance(treasuryDAO.address, communityTreasury.address)).to.equal("601".concat("000000"));
-        });
-        it("Should borrow delegated credit and allocate it to project", async function() {
-            await communityTreasury.allocateDelegated();
 
-            const usdcToken = await ethers.getContractAt("IERC20", usdc);
+        it("Should create a milestone", async function () {
+            const metadataUrl = "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice";
     
-            expect(await usdcToken.balanceOf(communityTreasury.address)).to.equal("601".concat("000000"));
-            expect(await communityTreasury.projectAllocation(gigProject)).to.equal("601".concat("000000"));
-        });
-        it("Should not allow receiving by project with no allocation", async function() {
-            expect(
-                communityTreasury.receiveAllocation("USDC", "1", "0x111111111111111111111111111111111111111e")
-            ).to.be.revertedWith("< allocation");
-        });
-        it("Should not allow receiving more than allocation", async function() {
-            expect(
-                communityTreasury.receiveAllocation("USDC", "601".concat("000001"), gigProject)
-            ).to.be.revertedWith("< allocation");
-        });
-        it("Should receive allocated credit", async function() {
-            await communityTreasury.receiveAllocation("USDC", "601".concat("000000"), gigProject);
+            const tx = await milestones.createMilestone(
+              memberAccount1.address,
+              6,
+              metadataUrl,
+              projectIds[0]
+            );
     
-            const usdcToken = await ethers.getContractAt("IERC20", usdc);
+            const txReceipt = await tx.wait();
+            const milestoneCreatedEvent = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneCreated');
+            const creator = milestoneCreatedEvent.args[0];
+            const tokenId = milestoneCreatedEvent.args[1];
     
-            expect(await usdcToken.balanceOf(gigProject)).to.equal("601".concat("000000"));
-
-        });
-        it("Should not be able to receive allocation again", async function() {
-            expect(await communityTreasury.projectAllocation(gigProject)).to.equal("0");
-            expect(
-                communityTreasury.receiveAllocation("USDC", "601".concat("000000"), gigProject)
-            ).to.be.revertedWith("< allocation");
-        });*/
+            const uri = await milestones.tokenURI(tokenId);
+            const owner = await milestones.ownerOf(tokenId);
+    
+            expect(uri).to.eq(metadataUrl);
+            expect(owner).to.eq(creator);
+            expect(owner).to.eq(memberAccount1.address);
+          });
+    
+          it("Should take a milestone", async function () {
+            const metadataUrl = "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice";
+    
+            let tx = await milestones.createMilestone(
+              memberAccount1.address,
+              6,
+              metadataUrl,
+              projectIds[0]
+            );
+    
+            let txReceipt = await tx.wait();
+            const milestoneCreatedEvent = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneCreated');
+            const creator = milestoneCreatedEvent.args[0];
+            const tokenId = milestoneCreatedEvent.args[1];
+    
+            await milestones.validate(tokenId);
+    
+            tx = await milestones.takeMilestone(
+              tokenId,
+              memberAccount2.address
+            );
+    
+            txReceipt = await tx.wait();
+            const milestoneTakenEvents = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneTaken');
+            const milestone = await milestones.milestones(tokenId);
+    
+            expect(milestone.taker).to.eq(memberAccount2.address);
+            expect(milestone.creator).to.eq(memberAccount1.address);
+            expect(milestone.status).to.eq(1);
+            expect(milestoneTakenEvents).to.not.null;
+          });
+    
+          it("Should submit a milestone", async function () {
+            const metadataUrl = "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice";
+    
+            let tx = await milestones.createMilestone(
+              memberAccount1.address,
+              6,
+              metadataUrl,
+              projectIds[0]
+            );
+    
+            let txReceipt = await tx.wait();
+            const milestoneCreatedEvent = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneCreated');
+            const creator = milestoneCreatedEvent.args[0];
+            const tokenId = milestoneCreatedEvent.args[1];
+    
+            await milestones.validate(tokenId);
+    
+            tx = await milestones.takeMilestone(
+              tokenId,
+              memberAccount2.address
+            );
+    
+            txReceipt = await tx.wait();
+            const milestoneTakenEvents = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneTaken');
+            expect(milestoneTakenEvents).to.not.null;
+    
+            await milestones.validate(tokenId);
+    
+            tx = await milestones.submitMilestone(
+              tokenId,
+              memberAccount2.address
+            );
+    
+            txReceipt = await tx.wait();
+            const milestoneSubmittedEvents = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneSubmitted');
+            expect(milestoneSubmittedEvents).to.not.null;
+    
+            const milestone = await milestones.milestones(tokenId);
+            expect(milestone.taker).to.eq(memberAccount2.address);
+            expect(milestone.creator).to.eq(memberAccount1.address);
+            expect(milestone.status).to.eq(2);
+    
+          });
+    
+    
+          it("Should complete a milestone", async function () {
+            const metadataUrl = "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice";
+    
+            let tx = await milestones.createMilestone(
+              memberAccount1.address,
+              6,
+              metadataUrl,
+              projectIds[0]
+            );
+    
+            let txReceipt = await tx.wait();
+            const milestoneCreatedEvent = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneCreated');
+            const creator = milestoneCreatedEvent.args[0];
+            const tokenId = milestoneCreatedEvent.args[1];
+    
+            await milestones.validate(tokenId);
+    
+            tx = await milestones.takeMilestone(
+              tokenId,
+              memberAccount2.address
+            );
+    
+            txReceipt = await tx.wait();
+            const milestoneTakenEvents = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneTaken');
+            expect(milestoneTakenEvents).to.not.null;
+    
+            await milestones.validate(tokenId);
+    
+            tx = await milestones.submitMilestone(
+              tokenId,
+              memberAccount2.address
+            );
+    
+            txReceipt = await tx.wait();
+            const milestoneSubmittedEvents = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneSubmitted');
+            expect(milestoneSubmittedEvents).to.not.null;
+    
+            let milestone = await milestones.milestones(tokenId);
+            expect(milestone.taker).to.eq(memberAccount2.address);
+            expect(milestone.creator).to.eq(memberAccount1.address);
+            expect(milestone.status).to.eq(2);
+    
+            await milestones.validate(tokenId);
+    
+            tx = await milestones.completeMilestone(
+              tokenId,
+              memberAccount1.address
+            );
+            txReceipt = await tx.wait();
+            milestone = await milestones.milestones(tokenId);
+            const milestoneCompletedEvents = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneCompleted');
+            expect(milestoneCompletedEvents).to.not.null;
+            expect(milestone.status).to.eq(3);
+    
+          });
     })
     
 });
