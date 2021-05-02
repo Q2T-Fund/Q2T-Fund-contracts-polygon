@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "./ICommunity.sol";
-import "./IProjects.sol";
 import "./MilestoneStatuses.sol";
 import "./IQ2TTrigger.sol";
 
@@ -50,14 +49,12 @@ contract Milestones is IERC721Metadata, ERC721 {
     bool public distributionInProgress;
 
     ICommunity community;
-    IProjects projects;
 
-    constructor(address _communityAddress, address _projects)
+    constructor(address _communityAddress)
         ERC721("Milestones", "MLST")
     {
         //TODO: community and projects addresses checks
         community = ICommunity(_communityAddress);
-        projects = IProjects(_projects);
         q2t = msg.sender;
         distributionInProgress = false;
     }

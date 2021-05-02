@@ -51,6 +51,7 @@ contract Q2T is ERC1155Holder {
     mapping (DataTypes.Template => address[]) public temapltesMilestones;
     mapping (address => DataTypes.Template) public milestonesTemplates;
     mapping (address => address) public milestonesTreasuries;
+    mapping (address => address) communitiesMilestones;
 
     constructor(
         address _addressesProvider
@@ -67,13 +68,13 @@ contract Q2T is ERC1155Holder {
         templatesReapayersTreasuries = address(templatesReapayersTreasuriesContract);
     }
 
-    function deployMilestones(DataTypes.Template _template, address _communityAddress, address _projects) public {
+    function deployMilestones(DataTypes.Template _template, address _communityAddress) public {
+        require (communitiesMilestones[_communityAddress] == address(0), "Milestones already deployed");
         require (_template != DataTypes.Template.NONE, "Template not specified");
         address newMilestones = MilestonesFactory(AddressesProvider(
             addressesProvider).milestonesFactory()
         ).deployMilestones(
-            _communityAddress, 
-            _projects
+            _communityAddress
         );
 
         temapltesMilestones[_template].push(newMilestones);
@@ -84,6 +85,7 @@ contract Q2T is ERC1155Holder {
         ).deployTreasury(address(this), newMilestones, addressesProvider);
 
         milestonesTreasuries[newMilestones] = newTreasury;
+        communitiesMilestones[_communityAddress] = newMilestones;
 
         emit MilestonesDeployed(_template, newMilestones, newTreasury);
     }

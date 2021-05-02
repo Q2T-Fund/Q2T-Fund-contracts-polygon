@@ -28,10 +28,6 @@ async function main() {
     console.log("Please provide Community address by setting COMMUNITY env variable");
     process.exit(0);
   };
-  if (!projectsAddress) {
-    console.log("Please provide Projects address by setting PROJECTS env variable");
-    process.exit(0);
-  };
 
   console.log("Deploying to network: ", network);
 
@@ -48,7 +44,6 @@ async function main() {
   console.log("About to create new Milestones and community treasury using Q2T: ", q2tAddress); 
   console.log("Using Template: ", milestoneTemplate);
   console.log("Using Community at address: ", communityAddress);
-  console.log("Using Projects at address: ", projectsAddress);
   await rl.question("Are you sure?", async function(answer) {
     if(answer != "y") {
       process.exit(0);
@@ -58,7 +53,7 @@ async function main() {
   console.log("----------------------------");
   console.log("Deploying one Milestones and community treasury");
 
-  const createMilestonesTx = await q2t.deployMilestones(i, address0, address0);
+  const createMilestonesTx = await q2t.deployMilestones(i, communityAddress);
 
   const events = (await createMilestonesTx.wait()).events?.filter((e) => {
     return e.event == "MilestonesDeployed"

@@ -54,7 +54,7 @@ async function main() {
   let communityTreasuriesAddresses = [];
 
   for (let i = 1; i <= 3; i++) {
-    const createMilestonesTx = await q2t.deployMilestones(i, address0, address0);
+    const createMilestonesTx = await q2t.deployMilestones(i, address0);
 
     const events = (await createMilestonesTx.wait()).events?.filter((e) => {
       return e.event == "MilestonesDeployed"
