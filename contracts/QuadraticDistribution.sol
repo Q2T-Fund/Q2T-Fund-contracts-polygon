@@ -13,16 +13,16 @@ library QuadraticDistribution {
         uint256 unweightedAlloc = 0;
 
         for (uint256 i = 0; i < _contributions.length; i++) {
-            unweightedAlloc = unweightedAlloc.add(sqrt(_contributions[i]));
+            unweightedAlloc = unweightedAlloc.add(sqrt(_contributions[i] * 1e18));
         }
 
         return unweightedAlloc.mul(unweightedAlloc);
     }
 
-    function sumUnweighted(uint256[] memory _unweightedAllocs, uint256 _contributiors) internal pure returns (uint256) {
+    function sumUnweighted(uint256[] memory _unweightedAllocs, uint256 _contributionsNum) internal pure returns (uint256) {
         uint256 allocSum = 0;
 
-        for (uint256 i = 0; i < _contributiors; i++) {
+        for (uint256 i = 0; i < _contributionsNum; i++) {
             allocSum = allocSum.add(_unweightedAllocs[i]);
         }
 
@@ -31,11 +31,11 @@ library QuadraticDistribution {
         return allocSum;
     }
 
-    function calcWeights(uint256[] memory _unweightedAllocs, uint256 _contributiors) internal pure returns (uint256[] memory) {
-        uint256 allocSum = sumUnweighted(_unweightedAllocs, _contributiors);
-        uint256[] memory weights = new uint256[](_contributiors);
+    function calcWeights(uint256[] memory _unweightedAllocs, uint256 _contributionsNum) internal pure returns (uint256[] memory) {
+        uint256 allocSum = sumUnweighted(_unweightedAllocs, _contributionsNum);
+        uint256[] memory weights = new uint256[](_contributionsNum);
 
-        for (uint256 i = 0; i < _contributiors; i++) {
+        for (uint256 i = 0; i < _contributionsNum; i++) {
             weights[i] = _unweightedAllocs[i].div(allocSum);
         }
 

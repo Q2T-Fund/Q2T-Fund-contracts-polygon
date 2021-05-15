@@ -36,8 +36,6 @@ contract Milestones is IERC721Metadata, ERC721 {
         MilestoneStatuses.MilestoneStatus status;
     }
 
-    address public communityAddress;
-
     mapping(uint256 => Milestone) public milestones;
     mapping(uint256 => uint256[]) public projectMilestones;
     mapping(uint256 => bool) public isValidated;
@@ -48,7 +46,7 @@ contract Milestones is IERC721Metadata, ERC721 {
     address public q2t;
     bool public distributionInProgress;
 
-    ICommunity community;
+    ICommunity public community;
 
     constructor(address _communityAddress)
         ERC721("Milestones", "MLST")
@@ -152,14 +150,14 @@ contract Milestones is IERC721Metadata, ERC721 {
 
         if (milestone.status == MilestoneStatuses.MilestoneStatus.Completed) {
             community.transferToTreasury(milestone.ditoCredits);
+            totalContributions.push(milestone.ditoCredits);
+            if (contributionsPerProject[milestone.projectId].length == 0) {
+                contributedProjects.push(milestone.projectId);
+            }
+            contributionsPerProject[milestone.projectId].push(milestone.ditoCredits);
+
             uint256 treasuryBalance = community.getTreasuryBalance();
-            if (treasuryBalance > 2000) {
-                if (contributionsPerProject[milestone.projectId].length == 0) {
-                    contributedProjects.push(milestone.projectId);
-                }
-                contributionsPerProject[milestone.projectId].push(milestone.ditoCredits);
-                totalContributions.push(milestone.ditoCredits);
-            } else {
+            if (treasuryBalance == 2000) {
                 IQ2TTrigger(q2t).thresholdReached();
                 distributionInProgress = true;
 
@@ -189,6 +187,7 @@ contract Milestones is IERC721Metadata, ERC721 {
 
         uint256[] memory contributions = totalContributions;
         delete totalContributions;
+
         return contributions;
     }
 

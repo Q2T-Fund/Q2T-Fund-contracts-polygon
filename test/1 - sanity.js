@@ -358,140 +358,187 @@ describe("Deposit and borrow happy flow", function() {
             expect(uri).to.eq(metadataUrl);
             expect(owner).to.eq(creator);
             expect(owner).to.eq(memberAccount1.address);
-          });
+        });
     
-          it("Should take a milestone", async function () {
+        it("Should take a milestone", async function () {
             const metadataUrl = "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice";
-    
+
             let tx = await milestones.createMilestone(
-              memberAccount1.address,
-              6,
-              metadataUrl,
-              projectIds[0]
+                memberAccount1.address,
+                6,
+                metadataUrl,
+                projectIds[0]
             );
-    
+
             let txReceipt = await tx.wait();
             const milestoneCreatedEvent = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneCreated');
             const creator = milestoneCreatedEvent.args[0];
             const tokenId = milestoneCreatedEvent.args[1];
-    
+
             await milestones.validate(tokenId);
-    
+
             tx = await milestones.takeMilestone(
-              tokenId,
-              memberAccount2.address
+                tokenId,
+                memberAccount2.address
             );
-    
+
             txReceipt = await tx.wait();
             const milestoneTakenEvents = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneTaken');
             const milestone = await milestones.milestones(tokenId);
-    
+
             expect(milestone.taker).to.eq(memberAccount2.address);
             expect(milestone.creator).to.eq(memberAccount1.address);
             expect(milestone.status).to.eq(1);
             expect(milestoneTakenEvents).to.not.null;
-          });
-    
-          it("Should submit a milestone", async function () {
+        });
+
+        it("Should submit a milestone", async function () {
             const metadataUrl = "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice";
-    
+
             let tx = await milestones.createMilestone(
-              memberAccount1.address,
-              6,
-              metadataUrl,
-              projectIds[0]
+                memberAccount1.address,
+                6,
+                metadataUrl,
+                projectIds[0]
             );
-    
+
             let txReceipt = await tx.wait();
             const milestoneCreatedEvent = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneCreated');
             const creator = milestoneCreatedEvent.args[0];
             const tokenId = milestoneCreatedEvent.args[1];
-    
+
             await milestones.validate(tokenId);
-    
+
             tx = await milestones.takeMilestone(
-              tokenId,
-              memberAccount2.address
+                tokenId,
+                memberAccount2.address
             );
-    
+
             txReceipt = await tx.wait();
             const milestoneTakenEvents = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneTaken');
             expect(milestoneTakenEvents).to.not.null;
-    
+
             await milestones.validate(tokenId);
-    
+
             tx = await milestones.submitMilestone(
-              tokenId,
-              memberAccount2.address
+                tokenId,
+                memberAccount2.address
             );
-    
+
             txReceipt = await tx.wait();
             const milestoneSubmittedEvents = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneSubmitted');
             expect(milestoneSubmittedEvents).to.not.null;
-    
+
             const milestone = await milestones.milestones(tokenId);
             expect(milestone.taker).to.eq(memberAccount2.address);
             expect(milestone.creator).to.eq(memberAccount1.address);
             expect(milestone.status).to.eq(2);
-    
-          });
-    
-    
-          it("Should complete a milestone", async function () {
+
+        });
+
+
+        it("Should complete a milestone", async function () {
             const metadataUrl = "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice";
-    
+
             let tx = await milestones.createMilestone(
-              memberAccount1.address,
-              6,
-              metadataUrl,
-              projectIds[0]
+                memberAccount1.address,
+                6,
+                metadataUrl,
+                projectIds[0]
             );
-    
+
             let txReceipt = await tx.wait();
             const milestoneCreatedEvent = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneCreated');
             const creator = milestoneCreatedEvent.args[0];
             const tokenId = milestoneCreatedEvent.args[1];
-    
+
             await milestones.validate(tokenId);
-    
+
             tx = await milestones.takeMilestone(
-              tokenId,
-              memberAccount2.address
+                tokenId,
+                memberAccount2.address
             );
-    
+
             txReceipt = await tx.wait();
             const milestoneTakenEvents = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneTaken');
             expect(milestoneTakenEvents).to.not.null;
-    
+
             await milestones.validate(tokenId);
-    
+
             tx = await milestones.submitMilestone(
-              tokenId,
-              memberAccount2.address
+                tokenId,
+                memberAccount2.address
             );
-    
+
             txReceipt = await tx.wait();
             const milestoneSubmittedEvents = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneSubmitted');
             expect(milestoneSubmittedEvents).to.not.null;
-    
+
             let milestone = await milestones.milestones(tokenId);
             expect(milestone.taker).to.eq(memberAccount2.address);
             expect(milestone.creator).to.eq(memberAccount1.address);
             expect(milestone.status).to.eq(2);
-    
+
             await milestones.validate(tokenId);
-    
+
             tx = await milestones.completeMilestone(
-              tokenId,
-              memberAccount1.address
+                tokenId,
+                memberAccount1.address
             );
             txReceipt = await tx.wait();
             milestone = await milestones.milestones(tokenId);
             const milestoneCompletedEvents = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneCompleted');
             expect(milestoneCompletedEvents).to.not.null;
             expect(milestone.status).to.eq(3);
-    
-          });
+
+        });
+
+        it("Should trigger quadratic distribution once threshold reached", async function() {
+            const metadataUrl = "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice";
+            let distributionTx;
+
+            for (let i = 0; i < 3; i++) {
+                let tx = await milestones.createMilestone(
+                    memberAccount1.address,
+                    720,
+                    metadataUrl,
+                    projectIds[0]
+                );
+        
+                let txReceipt = await tx.wait();
+                const milestoneCreatedEvent = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MilestoneCreated');
+                const tokenId = milestoneCreatedEvent.args[1];
+        
+                await milestones.validate(tokenId);
+        
+                tx = await milestones.takeMilestone(
+                    tokenId,
+                    memberAccount2.address
+                );
+        
+                await milestones.validate(tokenId);
+        
+                tx = await milestones.submitMilestone(
+                    tokenId,
+                    memberAccount2.address
+                );
+        
+                await milestones.validate(tokenId);
+        
+                tx = await milestones.completeMilestone(
+                    tokenId,
+                    memberAccount1.address
+                );
+
+                distributionTx = await milestones.validate(tokenId);
+            }
+
+            const distributionTxReceipt = await distributionTx.wait();
+            const distributionEvent = distributionTxReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'DistributionTriggered');
+
+            expect(distributionEvent).to.not.null;
+            expect(await milestones.distributionInProgress()).to.equal(true);
+        });
     })
     
 });

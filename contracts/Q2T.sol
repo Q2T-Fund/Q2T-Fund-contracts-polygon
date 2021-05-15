@@ -209,8 +209,9 @@ contract Q2T is ERC1155Holder {
             
             //check if community has contributed projects
             projectsNum = currMilestones.projectsNum();
+            uint256[] memory communityContributions = currMilestones.popTotalCommunityContributions();
             if (projectsNum > 0) {
-                unweigted[n] = QuadraticDistribution.calcUnweightedAlloc(currMilestones.popTotalCommunityContributions());
+                unweigted[n] = QuadraticDistribution.calcUnweightedAlloc(communityContributions);
                 n++;
                 contributedNum++;
                 didContribute[i] = true;
