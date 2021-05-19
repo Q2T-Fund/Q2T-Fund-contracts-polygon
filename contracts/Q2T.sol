@@ -88,6 +88,7 @@ contract Q2T is ERC1155Holder {
 
         milestonesTreasuries[newMilestones] = newTreasury;
         communitiesMilestones[_communityAddress] = newMilestones;
+        IMilestones(newMilestones).setTreasury(newTreasury);
 
         emit MilestonesDeployed(_template, newMilestones, newTreasury);
 

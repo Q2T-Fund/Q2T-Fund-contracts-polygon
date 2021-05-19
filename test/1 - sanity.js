@@ -46,6 +46,8 @@ const chainlink = addresses[network].chainlink;
 const gigHashIncompl = "0xB3B3886F389F27BC1F2A41F0ADD45A84453F0D2A877FCD1225F13CD95953A86";
 const gigProject = "0x111111111111111111111111111111111111111f";
 
+const expectedDelegations = ["5000", "0"];
+
 describe("Deposit and borrow happy flow", function() {
     describe("Deployment", function () {
         /*it("Should deploy gig validator (oracle)", async function () {
@@ -539,6 +541,59 @@ describe("Deposit and borrow happy flow", function() {
             expect(distributionEvent).to.not.null;
             expect(await milestones.distributionInProgress()).to.equal(true);
         });
-    })
+
+        it("Should delegate credit to communities treasuries after therhsold is reached", async function() {
+            //thershold was reached in previos test. this one just checks that credit was delegated
+            const debtUsdcToken = await ethers.getContractAt("ICreditDelegationToken", variableDebtUsdc);
+            const milestonesNum = await q2t.getMilestonesPerTemplate(1);
+
+            for (let i = 0; i < milestonesNum; i++) {
+                const mlstns = await q2t.temapltesMilestones(1,i);
+                const communityTreasury = await q2t.milestonesTreasuries(mlstns);
+
+                expect(String(await debtUsdcToken.borrowAllowance(q2t.address, communityTreasury)).slice(0, 4)).to.equal(expectedDelegations[i]);
+            }
+        });
+
+        it("Should have burnt treasury NFT for template 1 (leaving others alone)", async function() {
+            const templatesTreasuriesAddress = await q2t.templatesTreasuries();
+            const templatesTreasuries = await ethers.getContractAt("TemplatesTreasuriesWithReserves", templatesTreasuriesAddress);
+            const templatesReapayersTreasuriesAddress = await q2t.templatesReapayersTreasuries();
+            const templatesReapayersTreasuries = await ethers.getContractAt("TemplatesTreasuries", templatesReapayersTreasuriesAddress);
+
+            expect(await templatesTreasuries.balanceOf(q2t.address, 1)).to.equal("0");
+            expect(await templatesTreasuries.balanceOf(q2t.address, 2)).to.equal("0");
+            expect(await templatesTreasuries.balanceOf(q2t.address, 3)).to.equal("1");
+            expect(await templatesTreasuries.getCurrentFund(1)).to.equal("0"); 
+            expect(await templatesTreasuries.getCurrentFund(2)).to.equal("0");
+            expect(String(await templatesTreasuries.getCurrentFund(3)).slice(0, 4)).to.equal("7000");
+           
+            expect(await templatesTreasuries.balanceOf(q2t.address, 4)).to.equal("1");
+            expect(await templatesTreasuries.balanceOf(q2t.address, 5)).to.equal("0");
+            expect(await templatesTreasuries.balanceOf(q2t.address, 6)).to.equal("0");
+            expect(String(await templatesTreasuries.getCurrentReserve(1)).slice(0, 4)).to.equal("5000");
+            expect(await templatesTreasuries.getCurrentReserve(2)).to.equal("0");
+            expect(await templatesTreasuries.getCurrentReserve(3)).to.equal("0");
+
+            expect(await templatesReapayersTreasuries.balanceOf(q2t.address, 1)).to.equal("1");
+            expect(await templatesReapayersTreasuries.balanceOf(q2t.address, 2)).to.equal("0");
+            expect(await templatesReapayersTreasuries.balanceOf(q2t.address, 3)).to.equal("1");
+            expect(await templatesReapayersTreasuries.getCurrentFund(1)).to.equal("600".concat(e18));
+            expect(await templatesReapayersTreasuries.getCurrentFund(2)).to.equal("0");
+            expect(await templatesReapayersTreasuries.getCurrentFund(3)).to.equal("30".concat(e18));
+        });
+
+        it("Should borrow delegated credit and allocate it to project", async function() {
+            const mlstns = await q2t.temapltesMilestones(1,0);
+            const communityTreasuryAddress = await q2t.milestonesTreasuries(mlstns);
+            const communityTreasury = await ethers.getContractAt("CommunityTreasury", communityTreasuryAddress);
+            const usdcToken = await ethers.getContractAt("IERC20", usdc);
+
+            await communityTreasury.allocateDelegated();
+
+            expect(String(await usdcToken.balanceOf(communityTreasury.address)).slice(0,4)).to.equal("5000");
+            expect(String(await communityTreasury.projectAllocation(0)).slice(0, 4)).to.equal("5000");
+        });
+    });
     
 });

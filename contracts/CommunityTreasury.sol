@@ -34,8 +34,8 @@ contract CommunityTreasury is Ownable {
     address public q2t;
     mapping (uint256 => uint256) public projectAllocation;
     mapping (uint256 => address) public projects;
-    mapping (address => mapping (address => uint256)) public funds;
-    mapping (address => uint256) public totalFunded;
+    //mapping (address => mapping (address => uint256)) public funds;
+    //mapping (address => uint256) public totalFunded;
 
     constructor(
         address _q2t,

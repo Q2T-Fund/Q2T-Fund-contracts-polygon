@@ -44,6 +44,7 @@ contract Milestones is IERC721Metadata, ERC721 {
     uint256[] public contributedProjects;
     uint256[] public totalContributions;
     address public q2t;
+    address public treasury;
     bool public distributionInProgress;
 
     ICommunity public community;
@@ -173,9 +174,15 @@ contract Milestones is IERC721Metadata, ERC721 {
         }
     }
 
+    function setTreasury(address _treasury) public {
+        require(msg.sender == q2t, "Caller not Q2T");
+
+        treasury = _treasury;
+    }
+
     // TODO: called only by Q2T?
     function popContributionsPerProject(uint256 projectId) public returns(uint256[] memory) {
-        require(msg.sender == q2t, "Caller not Q2T");
+        require(msg.sender == treasury, "Caller not Community Treasury");
 
         uint256[] memory contributions = contributionsPerProject[projectId];
         delete contributionsPerProject[projectId];
