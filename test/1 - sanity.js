@@ -584,7 +584,7 @@ describe("Deposit and borrow happy flow", function() {
         });
 
         it("Should borrow delegated credit and allocate it to project", async function() {
-            const mlstns = await q2t.temapltesMilestones(1,0);
+            const mlstns = await q2t.temapltesMilestones(1, 0);
             const communityTreasuryAddress = await q2t.milestonesTreasuries(mlstns);
             const communityTreasury = await ethers.getContractAt("CommunityTreasury", communityTreasuryAddress);
             const usdcToken = await ethers.getContractAt("IERC20", usdc);
@@ -593,6 +593,48 @@ describe("Deposit and borrow happy flow", function() {
 
             expect(String(await usdcToken.balanceOf(communityTreasury.address)).slice(0,4)).to.equal("5000");
             expect(String(await communityTreasury.projectAllocation(0)).slice(0, 4)).to.equal("5000");
+            expect(await milestones.distributionInProgress()).to.equal(false);
+        });
+
+        it("Should not allow receiving by project with no allocation", async function() {
+            const mlstns = await q2t.temapltesMilestones(1, 0);
+            const communityTreasuryAddress = await q2t.milestonesTreasuries(mlstns);
+            const communityTreasury = await ethers.getContractAt("CommunityTreasury", communityTreasuryAddress);
+
+            expect(
+                communityTreasury.redeemAllocation(1, 1)
+            ).to.be.revertedWith("< allocation");
+        });
+        it("Should not allow receiving more than allocation", async function() {
+            const mlstns = await q2t.temapltesMilestones(1, 0);
+            const communityTreasuryAddress = await q2t.milestonesTreasuries(mlstns);
+            const communityTreasury = await ethers.getContractAt("CommunityTreasury", communityTreasuryAddress);
+
+            expect(
+                communityTreasury.redeemAllocation(500100000, projectIds[0])
+            ).to.be.revertedWith("< allocation");
+        });
+        it("Should receive allocated credit", async function() {
+            const mlstns = await q2t.temapltesMilestones(1, 0);
+            const communityTreasuryAddress = await q2t.milestonesTreasuries(mlstns);
+            const communityTreasury = await ethers.getContractAt("CommunityTreasury", communityTreasuryAddress);
+
+            await communityTreasury.redeemAllocation("500".concat("000000"), projectIds[0]);
+
+            const usdcToken = await ethers.getContractAt("IERC20", usdc);
+
+            expect(await usdcToken.balanceOf(communityMocks[0])).to.equal("500".concat("000000"));
+
+        });
+        it("Should not be able to receive allocation again", async function() {
+            const mlstns = await q2t.temapltesMilestones(1, 0);
+            const communityTreasuryAddress = await q2t.milestonesTreasuries(mlstns);
+            const communityTreasury = await ethers.getContractAt("CommunityTreasury", communityTreasuryAddress);
+
+            expect(await communityTreasury.projectAllocation(gigProject)).to.equal("0");
+            expect(
+                communityTreasury.redeemAllocation("1".concat("000000"), projectIds[0])
+            ).to.be.revertedWith("< allocation");
         });
     });
     
