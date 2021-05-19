@@ -7,16 +7,13 @@ import "./TemplatesTreasuriesWithReserves.sol";
 import "./DataTypes.sol";
 import "./IMilestones.sol";
 import "./MilestonesFactory.sol";
-import "./CommunityTreasuryFactory.sol";
+import "./CommunityTreasuryFactoryNoAave.sol";
 import "./QuadraticDistribution.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./ILendingPool.sol";
-import "./ICreditDelegationToken.sol";
-import "./IPriceOracle.sol";
 
-contract Q2T is ERC1155Holder {
+contract Q2TAaveless is ERC1155Holder {
     using SafeMath for uint256;
 
     event ThresholdReached(DataTypes.Template _template, address _milestones);
@@ -25,8 +22,8 @@ contract Q2T is ERC1155Holder {
         address _depositor, 
         string _currency, 
         uint256 _amount,
-        uint256 _repaymentAmount,
-        uint256 _aTokensAmount
+        uint256 _q2tAmount,
+        uint256 _repaymentAmount
     );
     event Delegated(
         address _communityTreasury, 
@@ -38,12 +35,15 @@ contract Q2T is ERC1155Holder {
         address _milestones,
         address _communityTreasury
     );
+    event Borrowed(
+        address _borrower,
+        address _currency,
+        uint256 _amount
+    );
 
     address public addressesProvider;
-    ILendingPoolAddressesProvider ledningPoolAP;
     address public templatesReapayersTreasuries;
     address public templatesTreasuries;
-    uint256 private aTokenLastBalance;
     uint256 public totalQ2TFund;
     uint256 public totalRepayerFund;
     mapping (address => mapping (address => uint256)) public repaymentAmounts;
@@ -52,6 +52,9 @@ contract Q2T is ERC1155Holder {
     mapping (address => DataTypes.Template) public milestonesTemplates;
     mapping (address => address) public milestonesTreasuries;
     mapping (address => address) public communitiesMilestones;
+    mapping (address => mapping (address => uint256)) public delegatedCredit; //treasury => currency => amount
+    mapping (address => mapping (address => uint256)) public borrowedCredit; //treasury => currency => amount
+
 
     constructor(
         address _addressesProvider
@@ -59,8 +62,6 @@ contract Q2T is ERC1155Holder {
         require(_addressesProvider != address(0), "Addressess provider cannot be 0");
 
         addressesProvider = _addressesProvider;
-        ledningPoolAP = ILendingPoolAddressesProvider(
-                AddressesProvider(addressesProvider).lendingPoolAP());
 
         TemplatesTreasuries templatesTreasuriesContract = new TemplatesTreasuriesWithReserves("");
         templatesTreasuries = address(templatesTreasuriesContract);
@@ -81,7 +82,7 @@ contract Q2T is ERC1155Holder {
         milestonesTemplates[newMilestones] = _template;
 
         //deploy treasury
-        address newTreasury = CommunityTreasuryFactory(AddressesProvider(
+        address newTreasury = CommunityTreasuryFactoryNoAave(AddressesProvider(
             addressesProvider).communityTreasuryFactory()).deployTreasury(
                 address(this), newMilestones, addressesProvider
             );
@@ -111,23 +112,11 @@ contract Q2T is ERC1155Holder {
 
         uint256 repaymentAmount = _amount.mul(_repayment).div(100);
         uint256 q2tAmount = _amount.sub(repaymentAmount);
-        
-        ILendingPool lendingPool = ILendingPool(ledningPoolAP.getLendingPool());
-
-        IERC20 aToken = IERC20(lendingPool.getReserveData(currencyAddress).aTokenAddress);
-        uint256 aTokenBalance = aToken.balanceOf(address(this));
-        uint256 aTokenYeild = aTokenBalance.sub(aTokenLastBalance);
-
-        currency.approve(address(lendingPool), q2tAmount);
-        lendingPool.deposit(currencyAddress, q2tAmount, address(this), 0);
-
-        aTokenLastBalance = aToken.balanceOf(address(this));
-        uint256 aTokenReceived = aTokenLastBalance.sub(aTokenBalance).add(aTokenYeild);
 
         if(TemplatesTreasuriesWithReserves(templatesTreasuries).balanceOf(address(this), uint256(_template)) == 0) {
-            TemplatesTreasuriesWithReserves(templatesTreasuries).mint(_template, aTokenReceived);
+            TemplatesTreasuriesWithReserves(templatesTreasuries).mint(_template, q2tAmount);
         } else {
-            TemplatesTreasuriesWithReserves(templatesTreasuries).addFunds(_template, aTokenReceived);
+            TemplatesTreasuriesWithReserves(templatesTreasuries).addFunds(_template, q2tAmount);
         }
 
         if(TemplatesTreasuries(templatesReapayersTreasuries).balanceOf(address(this), uint256(_template)) == 0) {
@@ -139,7 +128,7 @@ contract Q2T is ERC1155Holder {
         repaymentAmounts[msg.sender][currencyAddress] = repaymentAmounts[msg.sender][currencyAddress].add(repaymentAmount);
         depositors[msg.sender] = depositors[msg.sender].add(q2tAmount);
 
-        emit Deposited(_template, msg.sender, "DAI", _amount, repaymentAmount, aTokenReceived);
+        emit Deposited(_template, msg.sender, "DAI", _amount, q2tAmount, repaymentAmount);
     }
 
     function thresholdReached() public {
@@ -160,19 +149,14 @@ contract Q2T is ERC1155Holder {
             totalDeligating = TemplatesTreasuriesWithReserves(templatesTreasuries).useReserves(milestonesTemplate);
         }
 
-        IPriceOracle priceOracle = IPriceOracle(ledningPoolAP.getPriceOracle());
-        ILendingPool lendingPool = ILendingPool(ledningPoolAP.getLendingPool());
+        address currencyAddress = AddressesProvider(addressesProvider).currenciesAddresses("DAI");
+        
+        IERC20 currency = IERC20(currencyAddress);
 
-        //delegation is for usdc for now
-        //calculate maximum delegation contrct can afford
-        (,,uint256 borrowingPower,,,) = lendingPool.getUserAccountData(address(this));
-        uint256 maxDeligation = borrowingPower.div(
-            priceOracle.getAssetPrice(
-                AddressesProvider(addressesProvider).currenciesAddresses("USDC")));
-        maxDeligation = maxDeligation.mul(50).div(100); //lower borrowing to avoid liquidations
+        uint256 balance = currency.balanceOf(address(this));
 
-        if(maxDeligation < totalDeligating) { //check if not deegating too much, probably paranoya
-            totalDeligating = maxDeligation;
+        if(balance < totalDeligating) { //check if not exceeding balance too much, probably paranoia
+            totalDeligating = balance;
         }
 
         //quadratic distribution delegation to different communities
@@ -185,12 +169,23 @@ contract Q2T is ERC1155Holder {
         return temapltesMilestones[_template].length;
     }
 
-    function _delegate (address _treasury, address _currency, uint256 _amount) internal {
-        ILendingPool lendingPool = ILendingPool(ledningPoolAP.getLendingPool());
-        address debtTokenAddress = lendingPool.getReserveData(_currency).variableDebtTokenAddress;
-        ICreditDelegationToken(debtTokenAddress).approveDelegation(_treasury, _amount);
+    function borrow(address _currency) public returns (uint256) {
+        uint256 amount = delegatedCredit[msg.sender][_currency];
+        require(amount > 0, "nothing to borrow");
 
-        emit Delegated(_treasury, _currency, _amount);
+        IERC20 currency = IERC20(_currency);
+        uint256 balance = currency.balanceOf(address(this));
+        if (balance < amount) { //check if not exceeding balance too much, probably paranoia
+            amount = balance;
+        }
+
+        delegatedCredit[msg.sender][_currency];
+        borrowedCredit[msg.sender][_currency] = borrowedCredit[msg.sender][_currency].add(amount);
+        currency.transfer(msg.sender, amount);
+
+        emit Borrowed(msg.sender, _currency, amount);
+
+        return amount;      
     }
 
     function _distribute(DataTypes.Template _template, uint256 _fund) internal {
@@ -223,15 +218,17 @@ contract Q2T is ERC1155Holder {
 
         uint256[] memory weighted = QuadraticDistribution.calcWeightedAlloc(_fund, weights);
 
+        address currency = AddressesProvider(addressesProvider).currenciesAddresses("DAI");
+
         //and finally approve delegation
         n = 0;
         for (uint i = 0; i < milestonesNum; i++) {
             if (didContribute[i]) {
-                _delegate(
-                    milestonesTreasuries[milestones[i]], 
-                    AddressesProvider(addressesProvider).currenciesAddresses("USDC"), 
-                    weighted[n].div(1e12)
-                ); 
+                address treasury = milestonesTreasuries[milestones[i]];
+
+                delegatedCredit[treasury][currency] = delegatedCredit[treasury][currency].add(weighted[n]);
+
+                emit Delegated(treasury, currency, weighted[n]);
                 n++;
             }
         }
