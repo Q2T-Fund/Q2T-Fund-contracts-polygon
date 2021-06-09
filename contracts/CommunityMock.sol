@@ -11,6 +11,7 @@ pragma experimental ABIEncoderV2;
 
 contract CommunityMock {  
     uint256 treasury = 2000;
+    mapping (uint256 => address) projects;
 
     function metadataUri() public view returns(string memory) {
         string memory metadataUrl = "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice";
@@ -51,6 +52,10 @@ contract CommunityMock {
 
     function leave(address memberAddress) public {}
 
+    function addProjectAddress(uint256 _projectId, address _projectAddress) public {
+        projects[_projectId] = _projectAddress;
+    }
+
     function getMembers() public view returns (uint256[] memory) {
         uint256[] memory members;
 
@@ -70,6 +75,10 @@ contract CommunityMock {
     }
 
     function getProjectTreasuryAddress(uint256 projectId) public view returns(address) {
-        return address(this);
+        address projectAddress = projects[projectId];
+        if (projectAddress == address(0)) {
+            projectAddress = address(this);
+        }
+        return projectAddress;
     }
 }
